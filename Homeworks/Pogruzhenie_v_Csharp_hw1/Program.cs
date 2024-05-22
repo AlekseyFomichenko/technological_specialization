@@ -1,4 +1,4 @@
-﻿namespace Homeworks
+﻿namespace Homeworks.Pogruzhenie_v_Csharp_hw1
 {
     internal class Program
     {
