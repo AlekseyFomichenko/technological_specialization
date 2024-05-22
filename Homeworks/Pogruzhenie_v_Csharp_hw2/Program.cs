@@ -1,27 +1,22 @@
-﻿
-
-namespace Homeworks.Pogruzhenie_v_Csharp_hw2
+﻿namespace Homeworks.Pogruzhenie_v_Csharp_hw2
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            int[,] a = new int[3, 3] { { 7, 3, 2 }, { 4, 9, 6 }, { 1, 8, 5 } };
+            int[,] a =
+            { 
+                { 7, 3, 2 }, 
+                { 4, 9, 6 }, 
+                { 1, 8, 5 } 
+            };
 
-            int[] b = { 4, 2, 9, 3, 5, 0, 3 };
-
-            Sort(a);
-
-            for (int i = 0; i < a.GetLength(0); i++)
-            {
-                for (int j = 0; j < a.GetLength(1); j++)
-                {
-                    Console.Write(a[i, j]);
-                }
-                Console.WriteLine();
-            }
-
-            void Sort(int[,] array)
+            Print2dArray(a);
+            //Sort(a);
+            AnotherSort(a);
+            Print2dArray(a);
+        }
+            static void Sort(int[,] array) //Работает наполовину
             {
                 //for (int i = 0; i < 9; i++)
                 //{
@@ -84,9 +79,9 @@ namespace Homeworks.Pogruzhenie_v_Csharp_hw2
                 //int n = array.GetLength(0);
                 //int m = array.GetLength(1);
 
-                //for (int i = 0;i < 3; i++)
+                //for (int i = 0;i < n; i++)
                 //{
-                //    for(int j = 0;j < 3 - 1; j++)
+                //    for(int j = 0;j < m - 1; j++)
                 //    {
                 //        if (array[i,j] > array[i,j+1])
                 //        {
@@ -97,6 +92,34 @@ namespace Homeworks.Pogruzhenie_v_Csharp_hw2
                 //    }
                 //}
             }
-        }
+            static void Print2dArray(int[,] array)
+            {
+                for (int i = 0; i < array.GetLength(0); i++)
+                {
+                    for (int j = 0; j < array.GetLength(1); j++)
+                    {
+                        Console.Write(array[i, j]);
+                    }
+                    Console.WriteLine();
+                }
+                Console.WriteLine();
+            }
+            static void AnotherSort(int[,] array)
+            {
+                int[] newArray = new int[array.Length];
+                int t = 0;
+                for (int i = 0; i < array.GetLength(0); i++)
+                    for (int j = 0; j < array.GetLength(1); j++)
+                        newArray[t++] = array[i, j];
+
+                Array.Sort(newArray); //По сути здесь можно любой другой метод сортировки применить
+                t = 0;
+
+                for (int i = 0;i < array.GetLength(0); i++)
+                    for (int j = 0; j < array.GetLength(1); j++)
+                        array[i, j] = newArray[t++];
+            }
+            
+        
     }
 }
