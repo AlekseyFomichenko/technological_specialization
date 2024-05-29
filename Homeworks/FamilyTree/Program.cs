@@ -6,7 +6,6 @@ namespace Homeworks.FamilyTree
     {
         static void Main(string[] args)
         {
-
             FamilyMember grandMother1 = new FamilyMember()
             {
                 FullName = "Виноградова Варвара Максимовна",
@@ -71,16 +70,35 @@ namespace Homeworks.FamilyTree
                 Father = father
             };
 
+            grandMother1.Daughter = mother;
+            grandMother1.Husband = grandFather1;
+            grandFather1.Daughter = mother;
+            grandFather1.Wife = grandMother1;
+            grandMother2.Son = father;
+            grandMother2.Husband = grandFather2;
+            grandFather2.Son = father;
+            grandFather2.Wife = grandMother2;
+            mother.Husband = father;
+            mother.Son = son;
+            mother.Daughter = daughter;
+            father.Wife = mother;
+            father.Daughter = daughter;
+            father.Son = son;
+
+
             var GrandMothers = son.GetGrandMothers();
             var GrandFathers = daughter.GetGrandFathers();
 
+            mother.ShowPartner();
+            grandFather1.ShowPartner();
+
             foreach (var item in GrandFathers)
             {
-                Console.WriteLine(item.FullName);
+                Console.WriteLine(item?.FullName);
             }
             foreach (var item in GrandMothers)
             {
-                Console.WriteLine(item.FullName);
+                Console.WriteLine(item?.FullName);
             }
         }
     }
