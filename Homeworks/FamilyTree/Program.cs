@@ -94,11 +94,11 @@ namespace Homeworks.FamilyTree
 
             foreach (var item in GrandFathers)
             {
-                Console.WriteLine(item?.FullName);
+                Console.WriteLine(item?.FullName ?? "Нет данных");
             }
             foreach (var item in GrandMothers)
             {
-                Console.WriteLine(item?.FullName);
+                Console.WriteLine(item?.FullName ?? "Нет данных");
             }
         }
     }

@@ -42,8 +42,8 @@
 
         public void ShowPartner()
         {
-            if(Gender == Gender.female) Console.WriteLine("Супруг -> " + Husband.FullName);
-            else Console.WriteLine("Супруга -> " + Wife.FullName);
+            if(Gender == Gender.female) Console.WriteLine("Супруг -> " + (Husband?.FullName ?? "Нет данных"));
+            else Console.WriteLine("Супруга -> " + (Wife?.FullName ?? "Нет данных"));
         }
     }
 
