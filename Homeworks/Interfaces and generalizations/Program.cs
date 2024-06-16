@@ -18,7 +18,7 @@
             //Console.WriteLine(val);
 
             Devices devices = new();
-            Bits bits = new(63);
+            Bits bits = new(1000);
 
             Console.WriteLine(devices);
             devices.TurnOnOff(bits);

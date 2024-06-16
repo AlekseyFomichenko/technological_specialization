@@ -8,9 +8,9 @@ namespace Homeworks.Interfaces_and_generalizations
 {
     internal class Bits : IBitGetable
     {
-        public byte Value { get; private set; }
+        public long Value { get; private set; }
 
-        public Bits(byte value) => Value = value;
+        public Bits(long value) => Value = value;
 
         public bool GetBitByIndex(byte index)
         {
@@ -35,9 +35,12 @@ namespace Homeworks.Interfaces_and_generalizations
             set => SetBitByIndex(index, value);
         }
 
-        public static implicit operator byte(Bits bits) => bits.Value;
+        public static implicit operator byte(Bits bits) => (byte)bits.Value;
         public static explicit operator Bits(byte value) => new(value);
-        
+        public static implicit operator long(Bits bits) => bits.Value;
+        public static explicit operator Bits(long value) => new(value);
+        public static implicit operator int(Bits bits) => (int)bits.Value;
+        public static explicit operator Bits(int value) => new(value);
     }
 
 }
