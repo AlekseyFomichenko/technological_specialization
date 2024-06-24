@@ -16,8 +16,9 @@ namespace Homeworks.Collections_Part1
             map = myArray;
         }
 
-        public bool FindPath(int i, int j)
+        public int HasExit(int i, int j)
         {
+            int resault = 0;
             Console.WriteLine($"Респаун: {map[i, j]}");
             if (map[i, j] == 0) _path.Push(new(i, j));
 
@@ -31,7 +32,7 @@ namespace Homeworks.Collections_Part1
                 if (IsExit(current))
                 {
                     Console.WriteLine($"Путь найден {current.Item1},{current.Item2} ");
-                    return true;
+                    resault++;
                 }
 
                 map[current.Item1, current.Item2] = 1;
@@ -48,8 +49,7 @@ namespace Homeworks.Collections_Part1
                 if (IsMoveRight(current))
                     _path.Push(new(current.Item1, current.Item2 - 1));
             }
-            Console.WriteLine("Пути нет");
-            return false;
+            return resault;
         }
 
         private bool IsExit(Tuple<int, int> current) => map[current.Item1, current.Item2] == 2;

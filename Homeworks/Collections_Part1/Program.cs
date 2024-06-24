@@ -26,15 +26,15 @@ namespace Homeworks.Collections_Part1
                 {1, 1, 1, 1, 1, 1, 1 },
                 {1, 0, 0, 0, 0, 0, 1 },
                 {1, 0, 1, 1, 1, 0, 1 },
-                {1, 0, 0, 0, 1, 0, 2 },
+                {2, 0, 0, 0, 1, 0, 2 },
                 {1, 1, 0, 0, 1, 1, 1 },
-                {1, 1, 1, 1, 1, 1, 1 },
-                {1, 1, 1, 1, 1, 1, 1 }
+                {1, 1, 1, 0, 1, 1, 1 },
+                {1, 1, 1, 2, 1, 1, 1 }
             };
 
             CustomMap customMap = new CustomMap(labirynth1);
 
-            customMap.FindPath(3,3);
+            Console.WriteLine($"Найдено выходов: {customMap.HasExit(3, 3)}");
         }
     }
 }
