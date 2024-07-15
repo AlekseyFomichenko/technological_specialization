@@ -4,27 +4,57 @@
     {
         static void CalculatorGetResult(object sendler, EventArgs args)
         {
-            Console.WriteLine($"{((Calculator)sendler).Result}");
+            Console.WriteLine($"Ответ: {((Calculator)sendler).Result}");
         }
         static void Main(string[] args)
         {
             Calculator calc = new Calculator();
             calc.GetResult += CalculatorGetResult;
 
-            calc.Sum(2);
-            calc.Sub(4);
-            calc.Multy(3);
-            calc.CancelLast();
-            calc.CancelLast();
-            calc.CancelLast();
-            calc.CancelLast();
-            calc.CancelLast();
-            calc.CancelLast();
-            calc.CancelLast();
+            bool isEscape() => Console.ReadKey().Key.Equals(ConsoleKey.Escape);
 
-            List<int> ints = [2, 42, 5, 2, 5, 1, 63, 7, 16];
+            void ParseInput(double value)
+            {
+                Console.Write("\r");
+                if (double.TryParse(Console.ReadLine(), out var number)) value = number;
+                else Environment.Exit(0);
+            }
 
-            calc.Task3(ints, x => x % 2 == 0, (x, y) => x + y, Console.WriteLine);
+            bool flag = true;
+            while (flag)
+            {
+                double input1 = 0;
+                double input2 = 0;
+
+                Console.WriteLine("введите первое число: ");
+                if (isEscape()) Environment.Exit(0);
+                ParseInput(input1);
+                
+                Console.WriteLine("введите второе число: ");
+                if (isEscape()) Environment.Exit(0);
+                ParseInput(input2);
+
+                Console.Write("введите арифметическую операцию: ");
+                string operation = Console.ReadLine();
+
+                switch (operation)
+                {
+                    case "+":
+                        calc.Sum(input1, input2);
+                        break;
+                    case "-":
+                        calc.Sub(input1, input2);
+                        break;
+                    case "/":
+                        calc.Divide(input1, input2);
+                        break;
+                    case "*":
+                        calc.Multy(input1, input2);
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
     }
 }

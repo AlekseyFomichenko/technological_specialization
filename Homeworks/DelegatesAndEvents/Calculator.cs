@@ -4,15 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Homeworks.DelegatesAndEvents
 {
     internal class Calculator : ICalc
     {
-        public int Result { get; set; } = 0;
+        public double Result { get; set; } = 0;
 
         public event EventHandler<EventArgs> GetResult;
+        
 
-        Stack<int> Results = new Stack<int>();
+        Stack<double> Results = new Stack<double>();
 
         public void ClearResult()
         {
@@ -40,31 +42,31 @@ namespace Homeworks.DelegatesAndEvents
             RaisEvent();
         }
 
-        public void Divide(int value)
+        public void Divide(double value1, double value2)
         {
             Results.Push(Result);
-            Result /= value;
+            Result = value1 / value2;
             RaisEvent();
         }
 
-        public void Multy(int value)
+        public void Multy(double value1, double value2)
         {
             Results.Push(Result);
-            Result *= value;
+            Result = value1 * value2;
             RaisEvent();
         }
 
-        public void Sub(int value)
+        public void Sub(double value1, double value2)
         {
             Results.Push(Result);
-            Result -= value;
+            Result = value1 - value2;
             RaisEvent();
         }
 
-        public void Sum(int value)
+        public void Sum(double value1, double value2)
         {
             Results.Push(Result);
-            Result += value;
+            Result = value1 + value2;
             RaisEvent();
         }
         void RaisEvent()

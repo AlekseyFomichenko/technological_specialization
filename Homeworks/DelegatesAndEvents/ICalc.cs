@@ -9,10 +9,10 @@ namespace Homeworks.DelegatesAndEvents
     internal interface ICalc
     {
         event EventHandler<EventArgs> GetResult;
-        void Divide(int value);
-        void Multy(int value);
-        void Sum(int value);
-        void Sub(int value);
+        void Divide(double value1, double value2);
+        void Multy(double value1, double value2);
+        void Sum(double value1, double value2);
+        void Sub(double value1, double value2);
         void CancelLast();
     }
 }
