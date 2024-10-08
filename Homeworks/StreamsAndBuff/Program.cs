@@ -1,33 +1,38 @@
 ﻿
+using System.Globalization;
 
 namespace Homeworks.StreamAndBuff
 {
     internal class Program
     {
-        
+        const string path = "Program.cs";
+        const string word = "List";
         static void Main(string[] args)
         {
-            foreach (var arg in args)
-            {
-                Console.WriteLine(arg);
-            }
-            string str = ReaderFrom(args[0]);
-            WriteTo(str, args[1]);
+            var text = ReadFrom(path);
+            var filter = Filter(word, text);
+            Console.WriteLine(string.Join("\n", filter));
         }
 
-        private static void WriteTo(string str, string path)
+        static List<string> ReadFrom(string path)
         {
-            using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate))
+            List<string> list = new List<string>();
+            using (StreamReader sr = new StreamReader(path))
             {
-                using StreamWriter writer = new StreamWriter(str);
-                writer.Write(str);
+                while (!sr.EndOfStream) 
+                {
+                    var line = sr.ReadLine();
+                    list.Add(sr.ReadLine()!);
+                    Console.WriteLine(line);
+                }
             }
+            return list;
         }
 
-        private static string ReaderFrom(string path)
+        static List<string> Filter(string word, List<string> text)
         {
-            using StreamReader sr = new StreamReader(path);
-            return sr.ReadToEnd();
+            return text.Where(x => x.ToLower().Contains(word.ToLower())).
+                        Select(a => a.ToLower().Replace(word.ToLower(), word.ToUpper())).ToList();
         }
     }
 }
