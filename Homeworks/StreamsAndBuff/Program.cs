@@ -1,38 +1,45 @@
-﻿
-using System.Globalization;
-
-namespace Homeworks.StreamAndBuff
+﻿namespace Homework8
 {
     internal class Program
     {
-        const string path = "Program.cs";
-        const string word = "List";
         static void Main(string[] args)
         {
-            var text = ReadFrom(path);
-            var filter = Filter(word, text);
-            Console.WriteLine(string.Join("\n", filter));
+            DirectoryInfo current = new DirectoryInfo(Directory.GetCurrentDirectory());
+            SearchFile(current, args[0], args[1]);
         }
 
-        static List<string> ReadFrom(string path)
+        static void SearchFile(DirectoryInfo dir, string extension, string text, int indent = 0)
         {
-            List<string> list = new List<string>();
-            using (StreamReader sr = new StreamReader(path))
+            foreach (var folder in dir.EnumerateDirectories())
             {
-                while (!sr.EndOfStream) 
+                Console.WriteLine("{0}[{1}]", new string(' ', indent), Path.GetFileName(folder.FullName));
+                SearchFile(folder, extension, text, indent + 2);
+                SearchText(folder, extension, text);
+            }
+            SearchText(dir, extension, text, -2);
+        }
+
+        static private void SearchText(DirectoryInfo directory, string extension, string text, int indent = 0)
+        {
+            foreach (var file in directory.EnumerateFiles())
+            {
+                if (extension.Contains(file.Extension))
                 {
-                    var line = sr.ReadLine();
-                    list.Add(sr.ReadLine()!);
-                    Console.WriteLine(line);
+                    using (StreamReader sr = new StreamReader(file.FullName))
+                    {
+                        string line;
+                        while (!sr.EndOfStream)
+                        {
+                            line = sr.ReadLine();
+                            if (line.Contains(text))
+                            {
+                                Console.WriteLine("{0}{1}", new string(' ', indent + 2), Path.GetFileName(file.FullName));
+                                break;
+                            }
+                        }
+                    }
                 }
             }
-            return list;
-        }
-
-        static List<string> Filter(string word, List<string> text)
-        {
-            return text.Where(x => x.ToLower().Contains(word.ToLower())).
-                        Select(a => a.ToLower().Replace(word.ToLower(), word.ToUpper())).ToList();
         }
     }
 }
