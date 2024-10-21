@@ -1,45 +1,37 @@
-﻿namespace Homework8
+﻿using System.Text.Json;
+using System.Xml.Serialization;
+
+namespace lerning
 {
-    internal class Program
+    public class Program
     {
         static void Main(string[] args)
         {
-            DirectoryInfo current = new DirectoryInfo(Directory.GetCurrentDirectory());
-            SearchFile(current, args[0], args[1]);
-        }
+            string jsonFile = "{\"Current\":{ \"Time\": \"2023-06-18T20:35:06.722127+04:00\", \"Temperature\":29 , \"Weathercode\": 1, \"Windspeed\" : 2.1, \"Winddirection\" : 1}, \"History\": [{ \"Time\":\"2023-06-17T20:35:06.77707+04:00\", \"Temperature\": 29, \"Weathercode\": 2, \"Windspeed\" : 2.4 , \"Winddirection\":1},{ \"Time\": \"2023-06-16T20:35:06.777081+04:00\", \"Temperature\":22 , \"Weathercode\": 2, \"Windspeed\" : 2.4, \"Winddirection\":1},{ \"Time\": \"2023-06-15T20:35:06.777082+04:00\", \"Temperature\": 21, \"Weathercode\": 4, \"Windspeed\":2.2 ,\"Winddirection\":1}]}";
+            WeatherInfo? weatherInfo = JsonSerializer.Deserialize<WeatherInfo>(jsonFile);
 
-        static void SearchFile(DirectoryInfo dir, string extension, string text, int indent = 0)
-        {
-            foreach (var folder in dir.EnumerateDirectories())
-            {
-                Console.WriteLine("{0}[{1}]", new string(' ', indent), Path.GetFileName(folder.FullName));
-                SearchFile(folder, extension, text, indent + 2);
-                SearchText(folder, extension, text);
-            }
-            SearchText(dir, extension, text, -2);
-        }
+            XmlSerializer serializer = new XmlSerializer(typeof(WeatherInfo));
+            serializer.Serialize(Console.Out, weatherInfo);
 
-        static private void SearchText(DirectoryInfo directory, string extension, string text, int indent = 0)
-        {
-            foreach (var file in directory.EnumerateFiles())
+            using (FileStream? stream = File.OpenWrite("jsonToXML.xml"))
             {
-                if (extension.Contains(file.Extension))
-                {
-                    using (StreamReader sr = new StreamReader(file.FullName))
-                    {
-                        string line;
-                        while (!sr.EndOfStream)
-                        {
-                            line = sr.ReadLine();
-                            if (line.Contains(text))
-                            {
-                                Console.WriteLine("{0}{1}", new string(' ', indent + 2), Path.GetFileName(file.FullName));
-                                break;
-                            }
-                        }
-                    }
-                }
+                serializer.Serialize(stream, weatherInfo);
             }
         }
+        public class Weather
+        {
+            public DateTime Time { get; set; }
+            public double Temperature { get; set; }
+            public int Weathercode { get; set; }
+            public double Windspeed { get; set; }
+            public int Winddirection { get; set; }
+        }
+        public class WeatherInfo
+        {
+            public Weather Current { get; set; }
+            public List<Weather> History { get; set; }
+        }
+
+
     }
 }
