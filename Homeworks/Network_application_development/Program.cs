@@ -12,10 +12,23 @@ namespace Homeworks.Network_application_development
             {
                 IPEndPoint iPEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5564);
                 server.Bind(iPEndPoint);
-                server.Blocking = true;
-                Console.WriteLine("Waiting for connecting....");
+                server.Blocking = false;
                 server.Listen(100);
-                Socket socket = server.Accept();
+                Console.WriteLine("Waiting for connecting....");
+                Socket socket = null;
+                do
+                {
+                    try
+                    {
+                        socket = server.Accept();
+                    }
+                    catch
+                    {
+                        Console.Write('.');
+                        Thread.Sleep(1000);
+                    }
+                }
+                while (socket == null);
                 Console.WriteLine("Connected!");
                 byte[] buffer = new byte[255];
                 int count = socket.Receive(buffer);
