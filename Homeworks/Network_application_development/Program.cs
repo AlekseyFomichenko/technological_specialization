@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace Homeworks.Network_application_development
 {
@@ -16,6 +17,14 @@ namespace Homeworks.Network_application_development
                 server.Listen(100);
                 Socket socket = server.Accept();
                 Console.WriteLine("Connected!");
+                byte[] buffer = new byte[255];
+                int count = socket.Receive(buffer);
+                if (count > 0)
+                {
+                    string message = Encoding.UTF8.GetString(buffer);
+                    Console.WriteLine(message);
+                }
+                else Console.WriteLine("Message isn't sent");
                 server.Close();
             }
         }
