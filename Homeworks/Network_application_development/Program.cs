@@ -15,20 +15,13 @@ namespace Homeworks.Network_application_development
                 server.Blocking = false;
                 server.Listen(100);
                 Console.WriteLine("Waiting for connecting....");
-                Socket socket = null;
-                do
+                var task = server.AcceptAsync();
+                while (!task.IsCompleted)
                 {
-                    try
-                    {
-                        socket = server.Accept();
-                    }
-                    catch
-                    {
-                        Console.Write('.');
-                        Thread.Sleep(1000);
-                    }
+                    Console.Write('.');
+                    Thread.Sleep(1000);
                 }
-                while (socket == null);
+                Socket socket = task.Result;
                 Console.WriteLine("Connected!");
                 byte[] buffer = new byte[255];
                 int count = socket.Receive(buffer);
