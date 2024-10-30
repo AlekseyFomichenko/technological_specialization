@@ -14,14 +14,15 @@ namespace Homeworks.Network_application_development
                 server.Bind(localEndPoint);
                 byte[] buffer = new byte[1];
                 int count = 0;
-                while (count < 200)
+                while (count < 10)
                 {
                     EndPoint remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
-                    int c = server.ReceiveFrom(buffer, ref remoteEndPoint);
+                    var sf = new SocketFlags();
+                    int c = server.ReceiveMessageFrom(buffer, ref sf, ref remoteEndPoint, out IPPacketInformation info);
                     if (c == 1)
                     {
-                        if((remoteEndPoint as IPEndPoint)?.Port == 7755)
-                            Console.Write(buffer[0]);
+                        var ep = remoteEndPoint as IPEndPoint;
+                        Console.WriteLine($"Получено {info.Interface}, flags = {sf} от {ep.Address}:{ep.Port} значение [{buffer[0]}]");
                     }
                     count += c;
                 }
