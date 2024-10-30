@@ -10,16 +10,18 @@ namespace Homeworks.Network_application_development
         {
             using (Socket server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
             {
-                IPEndPoint iPEndPoint = new IPEndPoint(IPAddress.Any, 1234);
-                server.Bind(iPEndPoint);
+                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 1234);
+                server.Bind(localEndPoint);
                 byte[] buffer = new byte[1];
                 int count = 0;
-                while (count <= 200)
+                while (count < 200)
                 {
-                    int c = server.Receive(buffer);
+                    EndPoint remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+                    int c = server.ReceiveFrom(buffer, ref remoteEndPoint);
                     if (c == 1)
                     {
-                        Console.Write(buffer[0]);
+                        if((remoteEndPoint as IPEndPoint)?.Port == 7755)
+                            Console.Write(buffer[0]);
                     }
                     count += c;
                 }
