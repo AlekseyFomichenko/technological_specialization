@@ -5,30 +5,23 @@ namespace Clients
 {
     public class Program
     {
-        public static void Send(byte[] buffer, Socket socket)
-        {
-            for (int i = 0; i < 100; i++)
-            {
-                int count = socket.Send(buffer);
-            }
-            socket.Close();
-        }
         static void Main(string[] args)
         {
-            Socket client1 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            Socket client2 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            using (TcpClient client = new TcpClient())
+            {
+                Console.WriteLine("Connecting...");
+                client.Connect(IPAddress.Parse("127.0.0.1"), 12345);
+                Console.WriteLine("Connected!");
 
-            IPEndPoint iPEndPointClient1 = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 7744);
-            IPEndPoint iPEndPointClient2 = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 7755);
+                StreamReader reader = new StreamReader(client.GetStream());
+                StreamWriter writer = new StreamWriter(client.GetStream());
 
-            client1.Bind(iPEndPointClient1);
-            client2.Bind(iPEndPointClient2);
+                writer.WriteLine("Hi nigga");
+                writer.Flush();
 
-            client1.Connect("127.0.0.1", 1234);
-            client2.Connect("127.0.0.1", 1234);
-
-            (new Thread(() => Send(new byte[] { 1 }, client1))).Start();
-            (new Thread(() => Send(new byte[] { 2 }, client2))).Start();
+                string? s = reader.ReadLine();
+                Console.WriteLine(s);
+            }
         }
     }
 }

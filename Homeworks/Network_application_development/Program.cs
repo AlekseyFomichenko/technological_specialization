@@ -8,25 +8,21 @@ namespace Homeworks.Network_application_development
     {
         static void Main(string[] args)
         {
-            using (Socket server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+            TcpListener server = new TcpListener(IPAddress.Parse("127.0.0.1"), 12345);
+            server.Start();
+
+            using (TcpClient client = server.AcceptTcpClient())
             {
-                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 1234);
-                server.Bind(localEndPoint);
-                byte[] buffer = new byte[1];
-                int count = 0;
-                while (count < 10)
-                {
-                    EndPoint remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
-                    var sf = new SocketFlags();
-                    int c = server.ReceiveMessageFrom(buffer, ref sf, ref remoteEndPoint, out IPPacketInformation info);
-                    if (c == 1)
-                    {
-                        var ep = remoteEndPoint as IPEndPoint;
-                        Console.WriteLine($"Получено {info.Interface}, flags = {sf} от {ep.Address}:{ep.Port} значение [{buffer[0]}]");
-                    }
-                    count += c;
-                }
-                Console.WriteLine("\n Прочли 200 байт");
+                Console.WriteLine("Connected");
+                StreamReader reader = new StreamReader(client.GetStream());
+                StreamWriter writer = new StreamWriter(client.GetStream());
+
+                string? s = reader.ReadLine();
+                Console.WriteLine(s);
+
+                string r = new string(s?.Reverse().ToArray());
+                writer.WriteLine(r);
+                writer.Flush();
             }
         }
     }
