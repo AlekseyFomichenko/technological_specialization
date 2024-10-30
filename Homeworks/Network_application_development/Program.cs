@@ -8,16 +8,23 @@ namespace Homeworks.Network_application_development
     {
         static void Main(string[] args)
         {
-            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            socket.Connect("yandex.ru", 80);
-            Console.WriteLine($"Connecting to address: {(socket.RemoteEndPoint as IPEndPoint)?.Address}");
-
-            socket.Disconnect(true);
-
-            var task = socket.ConnectAsync("google.ru", 80);
-            task.Wait();
-
-            Console.WriteLine($"Connecting to address: {(socket.RemoteEndPoint as IPEndPoint)?.Address}");
+            using (Socket server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+            {
+                IPEndPoint iPEndPoint = new IPEndPoint(IPAddress.Any, 1234);
+                server.Bind(iPEndPoint);
+                byte[] buffer = new byte[1];
+                int count = 0;
+                while (count <= 200)
+                {
+                    int c = server.Receive(buffer);
+                    if (c == 1)
+                    {
+                        Console.Write(buffer[0]);
+                    }
+                    count += c;
+                }
+                Console.WriteLine("\n Прочли 200 байт");
+            }
         }
     }
 }
