@@ -11,11 +11,9 @@ namespace Server
         {
             using (UdpClient server = new UdpClient(12345))
             {
-                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 0);
-
+                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0);
+                Console.Clear();
                 Console.WriteLine("Waiting for connecting...");
-
-                int count = 0;
                 while (true)
                 {
                     byte[] buffer = server.Receive(ref localEndPoint);
@@ -23,7 +21,7 @@ namespace Server
                     string messageText = Encoding.UTF8.GetString(buffer);
                     Message? message = Message.DeserializeMessageFromJson(messageText);
                     message?.PrintMessageInfo();
-                    
+                    server.Send(Encoding.UTF8.GetBytes("Сообщение доставлено!"), localEndPoint);
                 }
             }
         }

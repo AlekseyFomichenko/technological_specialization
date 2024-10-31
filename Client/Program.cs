@@ -14,23 +14,23 @@ namespace Client
             {
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(args[1]), 12345);
                 string message;
+                Console.Clear();
                 while (true)
                 {
                     do
                     {
-                        Console.Clear();
-                        Console.WriteLine("Введите сообщение:");
+                        Console.Write("Введите сообщение: ");
                         message = Console.ReadLine()!;
                     }
-                    while (string.IsNullOrEmpty(message));
+                    while (string.IsNullOrWhiteSpace(message));
 
                     msg.Text = message;
                     string messageFromJson = msg.SerializeMessageToJson();
                     byte[] buffer = Encoding.UTF8.GetBytes(messageFromJson);
                     client.Send(buffer, buffer.Length, localEndPoint);
+                    string answer = Encoding.UTF8.GetString(client.Receive(ref localEndPoint));
+                    Console.WriteLine(answer ?? "Что-то пошло не так!");
                 }
-                
-
             }
         }
     }
