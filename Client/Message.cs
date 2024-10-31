@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Network
 {
+
     public class Message
     {
         public string? Text { get; set; }
@@ -14,6 +15,10 @@ namespace Network
         public string? NicknameFrom { get; set; }
         public string? NicknameTo { get; set; }
         public string SerializeMessageToJson() => JsonSerializer.Serialize(this);
-        public static void Deserialize(string message) => JsonSerializer.Deserialize<Message>(message);
+        public static Message? DeserializeMessageFromJson(string message) => JsonSerializer.Deserialize<Message>(message);
+        public void PrintMessageInfo()
+        {
+            Console.WriteLine($"{DateTime} получено сообщение [{Text}] от {NicknameFrom}");
+        }
     }
 }
