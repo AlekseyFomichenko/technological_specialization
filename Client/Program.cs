@@ -28,6 +28,11 @@ namespace Client
                     string messageFromJson = msg.SerializeMessageToJson();
                     byte[] buffer = Encoding.UTF8.GetBytes(messageFromJson);
                     client.Send(buffer, buffer.Length, localEndPoint);
+                    if(msg.Text.Equals("Exit"))
+                    {
+                        Console.WriteLine("Чат завершён.");
+                        break;
+                    }
                     string answer = Encoding.UTF8.GetString(client.Receive(ref localEndPoint));
                     Console.WriteLine(answer ?? "Что-то пошло не так!");
                 }

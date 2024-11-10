@@ -20,6 +20,7 @@ namespace Server
                     if (buffer == null) break;
                     string messageText = Encoding.UTF8.GetString(buffer);
                     Message? message = Message.DeserializeMessageFromJson(messageText);
+                    if(message.Text.Equals("Exit")) break;
                     message?.PrintMessageInfo();
                     server.Send(Encoding.UTF8.GetBytes("Сообщение доставлено!"), localEndPoint);
                 }
