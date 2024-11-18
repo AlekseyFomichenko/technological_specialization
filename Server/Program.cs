@@ -9,8 +9,14 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            var t = Task.Run(Server.TaskServer);
-            Task.WaitAll(t);
+            try
+            {
+                ServerCode.Server();
+            }
+            catch (OperationCanceledException e)
+            {
+                Console.WriteLine("Сервер завершил работу.");
+            }
         }
     }
 }
