@@ -1,22 +1,19 @@
-﻿using EFSeminar.Abstracts;
-using EFSeminar.Models;
-using System.Net;
+﻿using ChatCommon.Abstracts;
+using ChatCommon.Models;
+using ChatDB;
 
-namespace EFSeminar.Services
+namespace ChatApp
 {
-    public class Server
+    public class Server<T>
     {
-        Dictionary<string, IPEndPoint> clients = new Dictionary<string, IPEndPoint>();
-        private readonly IMessageSource _messageSource;
-        private IPEndPoint ep;
-        public Server()
+        Dictionary<string, T> clients = new Dictionary<string, T>();
+        private readonly IMessageSourceServer<T> _messageSource;
+        private T ep;
+        
+        public Server(IMessageSourceServer<T> messageSource)
         {
-            ep = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0);
-            _messageSource = new UdpMessageSource(); 
-        }
-        public Server(IMessageSource messageSource)
-        {
-            _messageSource = messageSource; 
+            _messageSource = messageSource;
+            ep = _messageSource.CreateEndPoint();
         }
         bool work = true;
         public void Stop() => work = false;
@@ -40,7 +37,7 @@ namespace EFSeminar.Services
         private async Task Register(NetMessage message)
         {
             Console.WriteLine($"Message Register name = {message.NickNameFrom}");
-            if (clients.TryAdd(message.NickNameFrom, message.EndPoint))
+            if (clients.TryAdd(message.NickNameFrom, _messageSource.CopyEndPoint(message.EndPoint)))
             {
                 using(ChatContext context = new ChatContext())
                 {
@@ -51,7 +48,7 @@ namespace EFSeminar.Services
         }
         private async Task RelyMessage(NetMessage netMessage)
         {
-            if (clients.TryGetValue(netMessage.NickNameTo, out IPEndPoint iPEnd))
+            if (clients.TryGetValue(netMessage.NickNameTo, out T iPEnd))
             {
                 int? id = null;
                 using (ChatContext context = new ChatContext())
@@ -64,7 +61,7 @@ namespace EFSeminar.Services
                     id = msg.MessageId;
                 }
                 netMessage.Id = id;
-                await _messageSource.SendAsync(netMessage, iPEnd);
+                await _messageSource. SendAsync(netMessage, iPEnd);
                 Console.WriteLine($"Message relied, from = {netMessage.NickNameFrom}, to = {netMessage.NickNameTo}");
             }
             else Console.WriteLine("Пользователь не найден");

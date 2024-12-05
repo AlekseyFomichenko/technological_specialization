@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 
-namespace EFSeminar.Models
+namespace ChatCommon.Models
 {
     public enum Command
     {
@@ -14,7 +14,7 @@ namespace EFSeminar.Models
         public int? Id { get; set; }
         public string Text { get; set; }
         public DateTime Date { get; set; }
-        public string? NickNameTo {  get; set; }
+        public string? NickNameTo { get; set; }
         public string? NickNameFrom { get; set; }
         public IPEndPoint? EndPoint { get; set; }
         public Command Command { get; set; }
