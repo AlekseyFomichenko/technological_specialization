@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Data.Common;
 
 namespace Market.Models
 {
@@ -10,7 +9,7 @@ namespace Market.Models
         public DbSet<ProductGroup> ProductGroup { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Server=.; Database=WebStore; Integrated Security=False; TrustServerCertificate=")
+            optionsBuilder.UseSqlServer(@"Server=.; Database=GB;Integrated Security=False;TrustServerCertificate=True; Trusted_Connection=True;")
                 .UseLazyLoadingProxies();
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
