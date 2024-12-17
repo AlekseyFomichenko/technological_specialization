@@ -4,9 +4,17 @@ namespace Market.Models
 {
     public class ProductContext : DbContext
     {
-        public DbSet<ProductStorage> ProductStorage { get; set; }
+        public DbSet<Storage> Storages { get; set; }
         public DbSet<Product> Products { get; set; }
-        public DbSet<ProductGroup> ProductGroup { get; set; }
+        public DbSet<ProductGroup> ProductGroups { get; set; }
+        public ProductContext()
+        {
+            
+        }
+        public ProductContext(DbContextOptions<ProductContext> dbContextOptions) : base(dbContextOptions)
+        {
+            
+        }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(@"Server=.; Database=GB;Integrated Security=False;TrustServerCertificate=True; Trusted_Connection=True;")
@@ -37,7 +45,7 @@ namespace Market.Models
                 .IsRequired();
 
                 entity.HasOne(e => e.ProductGroup)
-                .WithMany(c => Products)
+                .WithMany(c => c.Products)
                 .HasForeignKey(x => x.Id)
                 .HasConstraintName("ProductGroupToProduct");
             });
