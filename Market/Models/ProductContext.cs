@@ -17,7 +17,7 @@ namespace Market.Models
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(@"Server=.; Database=GB;Integrated Security=False;TrustServerCertificate=True; Trusted_Connection=True;")
+            optionsBuilder.UseSqlServer(@"Server=DESKTOP-Q4JDHR5; Database=Market;Integrated Security=False;TrustServerCertificate=True; Trusted_Connection=True;")
                 .UseLazyLoadingProxies();
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
