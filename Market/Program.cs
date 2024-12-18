@@ -1,4 +1,7 @@
 
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Market.Abstractions;
 using Market.Repo;
 
 namespace Market
@@ -16,6 +19,13 @@ namespace Market
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddAutoMapper(typeof(MappingProfile));
+            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+            //builder.Host.ConfigureContainer<ContainerBuilder>(cb =>
+            //{
+            //    cb.RegisterType<ProductRepository>().As<IProductRepository>();
+            //});
+            builder.Services.AddSingleton<IProductRepository, ProductRepository>();
+            builder.Services.AddMemoryCache(o => o.TrackStatistics = true);
 
             var app = builder.Build();
 

@@ -7,7 +7,7 @@ namespace Market.Abstractions
     {
         public int AddGroup(ProductGroupDto group);
         public IEnumerable<ProductGroupDto> GetGroups();
-        public int AddProduct(Product product);
-        public IEnumerable<Product> GetProducts();
+        public int AddProduct(ProductDto product);
+        public IEnumerable<ProductDto> GetProducts();
     }
 }

@@ -1,4 +1,6 @@
-﻿using Market.Models;
+﻿using Market.Abstractions;
+using Market.Models;
+using Market.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Market.Controllers
@@ -7,53 +9,38 @@ namespace Market.Controllers
     [Route("[controller]")]
     public class ProductController : ControllerBase
     {
-        [HttpGet("getProduct")]
+        private readonly IProductRepository _repository;
+        public ProductController(IProductRepository productRepository)
+        {
+            _repository = productRepository;
+        }
+
+        [HttpGet("get_products")]
         public IActionResult GetProducts()
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    var products = context.Products.Select(x => new Product()
-                    {
-                        Id = x.Id,
-                        Name = x.Name,
-                        Description = x.Description
-                    });
-                    return Ok(products);
-                }
-            }
-            catch
-            {
-                return StatusCode(500);
-            }
+            var products = _repository.GetProducts();
+            return Ok(products);
         }
-        [HttpPut("putProducts")]
-        public IActionResult PutProducts([FromQuery] string name, string description, int groupId, int price)
+
+        [HttpPut("put_products")]
+        public IActionResult AddProducts([FromBody] ProductDto productDto)
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    if (!context.Products.Any(x => x.Name.ToLower().Equals(name)))
-                    {
-                        context.Add(new Product()
-                        {
-                            Name = name,
-                            Description = description,
-                            Price = price,
-                            ProductGroupId = groupId
-                        });
-                        context.SaveChanges();
-                        return Ok();
-                    }
-                    else return StatusCode(404);
-                }
-            }
-            catch
-            {
-                return StatusCode(500);
-            }
+            var res = _repository.AddProduct(productDto);
+            return Ok(res);
+        }
+
+        [HttpGet("get_productGroups")]
+        public IActionResult GetProductGroups()
+        {
+            var groups = _repository.GetGroups();
+            return Ok(groups);
+        }
+
+        [HttpPut("put_productGroups")]
+        public IActionResult AddProductGroups([FromBody] ProductGroupDto productGroupDto)
+        {
+            var res = _repository.AddGroup(productGroupDto);
+            return Ok(res);
         }
     }
 }
