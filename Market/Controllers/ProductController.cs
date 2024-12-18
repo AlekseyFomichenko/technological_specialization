@@ -55,5 +55,76 @@ namespace Market.Controllers
                 return StatusCode(500);
             }
         }
+        [HttpDelete("removeProduct/{productId}")]
+        public IActionResult RemoveProduct(int productId)
+        {
+            try
+            {
+                using (var context = new ProductContext())
+                {
+                    var product = context.Products.Find(productId);
+                    if (product != null)
+                    {
+                        context.Products.Remove(product);
+                        context.SaveChanges();
+                        return Ok();
+                    }
+                    else return NotFound();
+                }
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+        [HttpDelete("removeProductGroup/{productGroupId}")]
+        public IActionResult RemoveProductGroup(int productGroupId)
+        {
+            try
+            {
+                using (var context = new ProductContext())
+                {
+                    var group = context.ProductGroups.Find(productGroupId);
+                    if (group != null)
+                    {
+                        var temp = context.Products.Where(x => x.ProductGroupId == productGroupId).ToList();
+                        if (temp.Any())
+                        {
+                            context.Products.RemoveRange(temp);
+                        }
+                        context.ProductGroups.Remove(group);
+                        context.SaveChanges();
+                        return Ok();
+                    }
+                    else return NotFound();
+                }
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+        [HttpPut("updateProductPrice/{productPrice}")]
+        public IActionResult UpdateProductPrice(int productId, [FromQuery] int newPrice)
+        {
+            try
+            {
+                using (var context = new ProductContext())
+                {
+                    var product = context.Products.Find(productId);
+                    if (product != null)
+                    {
+                        product.Price = newPrice;
+                        context.SaveChanges();
+                        return Ok();
+                    }
+                    else return NotFound();
+                }
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
     }
 }
