@@ -1,0 +1,6 @@
+services:
+  market:
+    image: ${DOCKER_REGISTRY-}market
+    build:
+      context: .
+      dockerfile: Market/Dockerfile
