@@ -1,6 +1,6 @@
 ﻿namespace ChatContracts
 {
-    public class Class1
+    public class User
     {
 
     }
