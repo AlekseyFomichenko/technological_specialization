@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace ChatContracts
 {
-    internal class Command
+    public enum Command
     {
+        Register,
+        Message,
+        Confirmation
     }
 }

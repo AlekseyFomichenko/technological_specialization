@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ChatContracts\ChatContracts.csproj" />
+    <ProjectReference Include="..\ChatTransport\ChatTransport.csproj" />
+  </ItemGroup>
+
 </Project>

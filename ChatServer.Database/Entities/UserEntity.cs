@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace ChatServer.Database.Entities
 {
-    internal class UserEntity
+    public class UserEntity
     {
+        public virtual List<MessageEntity> MessagesTo { get; set; } = new();
+        public virtual List<MessageEntity> MessagesFrom { get; set; } = new();
+        public int Id { get; set; }
+        public string? FullName { get; set; }
     }
 }
