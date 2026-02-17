@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChatContracts
+namespace ChatTransport.Udp
 {
-    internal class NetMessage
+    internal class UdpMessageSourceClient
     {
     }
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChatContracts
+namespace ChatTransport.Abstracts
 {
-    internal class NetMessage
+    internal interface IMessageSourceServer
     {
     }
 }
