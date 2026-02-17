@@ -6,9 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ChatCommon\ChatCommon.csproj" />
-    <ProjectReference Include="..\ChatDB\ChatDB.csproj" />
-  </ItemGroup>
-
 </Project>
