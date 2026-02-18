@@ -127,6 +127,16 @@ namespace Client
                     {
                         case Command.Message:
                             PrintMessage(msg);
+                            if (msg.Id != null)
+                            {
+                                var confirmation = new NetMessage
+                                {
+                                    Command = Command.Confirmation,
+                                    Id = msg.Id,
+                                    Date = DateTime.UtcNow
+                                };
+                                await _messageSource.SendAsync(confirmation, _messageSource.GetServer());
+                            }
                             break;
                         case Command.Error:
                             Console.WriteLine($"[Error] {(msg.ErrorCode?.ToString() ?? "?")}: {msg.ErrorDescription ?? ""}");
