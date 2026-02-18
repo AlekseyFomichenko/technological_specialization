@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using ChatContracts;
 using ChatTransport.Abstracts;
 using ChatTransport.Tcp;
@@ -199,10 +201,15 @@ namespace Client
                     await SendFileAsync(line.Substring(5).Trim());
                     continue;
                 }
+                if (line.StartsWith("download ", StringComparison.OrdinalIgnoreCase))
+                {
+                    await DownloadFileAsync(line.Substring(9).Trim());
+                    continue;
+                }
                 var colon = line.IndexOf(':');
                 if (colon <= 0)
                 {
-                    Console.WriteLine("Use: recipient: message  or  file recipient: path");
+                    Console.WriteLine("Use: recipient: message  or  file recipient: path  or  download fileId [path]");
                     continue;
                 }
                 var to = line[..colon].Trim();
@@ -294,6 +301,82 @@ namespace Client
             catch (Exception ex)
             {
                 Console.WriteLine("File send error: " + ex.Message);
+            }
+        }
+
+        private async Task DownloadFileAsync(string args)
+        {
+            if (string.IsNullOrWhiteSpace(_nick))
+                return;
+            var parts = args.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0 || !int.TryParse(parts[0], out var fileId))
+            {
+                Console.WriteLine("Use: download fileId [path]");
+                return;
+            }
+            var savePath = parts.Length > 1 ? parts[1].Trim() : null;
+            try
+            {
+                using var client = new TcpClient();
+                await client.ConnectAsync(_serverHost, _tcpFilePort);
+                await using var stream = client.GetStream();
+                stream.WriteByte(TcpFileTransferReceiver.ModeDownload);
+                var fileIdBytes = BitConverter.GetBytes(fileId);
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(fileIdBytes);
+                await stream.WriteAsync(fileIdBytes);
+                var nickBytes = Encoding.UTF8.GetBytes(_nick);
+                var nickLen = (ushort)Math.Min(nickBytes.Length, 512);
+                var nickLenBytes = BitConverter.GetBytes(nickLen);
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(nickLenBytes);
+                await stream.WriteAsync(nickLenBytes);
+                await stream.WriteAsync(nickBytes.AsMemory(0, nickLen));
+                var lengthBytes = new byte[8];
+                await stream.ReadExactlyAsync(lengthBytes);
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(lengthBytes);
+                var length = BitConverter.ToInt64(lengthBytes, 0);
+                if (length <= 0)
+                {
+                    Console.WriteLine("Download failed: file not found or access denied.");
+                    return;
+                }
+                var nameLenBytes = new byte[2];
+                await stream.ReadExactlyAsync(nameLenBytes);
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(nameLenBytes);
+                var nameLen = BitConverter.ToUInt16(nameLenBytes, 0);
+                var fileName = "download_" + fileId;
+                if (nameLen > 0)
+                {
+                    var nameBytes = new byte[nameLen];
+                    await stream.ReadExactlyAsync(nameBytes);
+                    fileName = Encoding.UTF8.GetString(nameBytes);
+                }
+                var fullPath = string.IsNullOrEmpty(savePath)
+                    ? Path.Combine(Directory.GetCurrentDirectory(), fileName)
+                    : Directory.Exists(savePath)
+                        ? Path.Combine(savePath, fileName)
+                        : savePath;
+                await using (var fileStream = File.Create(fullPath))
+                {
+                    var remaining = length;
+                    var buffer = new byte[Math.Min(81920, remaining)];
+                    while (remaining > 0)
+                    {
+                        var toRead = (int)Math.Min(remaining, buffer.Length);
+                        var read = await stream.ReadAsync(buffer.AsMemory(0, toRead));
+                        if (read == 0) break;
+                        await fileStream.WriteAsync(buffer.AsMemory(0, read));
+                        remaining -= read;
+                    }
+                }
+                Console.WriteLine("Downloaded: " + fullPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Download error: " + ex.Message);
             }
         }
 

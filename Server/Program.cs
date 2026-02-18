@@ -1,3 +1,4 @@
+using System.Text;
 using ChatServer.Core;
 using ChatServer.Database;
 using ChatTransport.Tcp;
@@ -51,10 +52,40 @@ namespace ServerHost
             {
                 try
                 {
-                    var (stream, length) = await receiver.AcceptAsync();
+                    var (stream, firstByte) = await receiver.AcceptConnectionAsync();
                     try
                     {
-                        await server.ProcessFileUploadAsync(stream, length);
+                        if (firstByte == TcpFileTransferReceiver.ModeUpload)
+                        {
+                            var lengthBytes = new byte[8];
+                            lengthBytes[0] = firstByte;
+                            await stream.ReadExactlyAsync(lengthBytes.AsMemory(1, 7));
+                            if (BitConverter.IsLittleEndian)
+                                Array.Reverse(lengthBytes);
+                            var length = BitConverter.ToInt64(lengthBytes, 0);
+                            await server.ProcessFileUploadAsync(stream, length);
+                        }
+                        else if (firstByte == TcpFileTransferReceiver.ModeDownload)
+                        {
+                            var fileIdBytes = new byte[4];
+                            await stream.ReadExactlyAsync(fileIdBytes);
+                            if (BitConverter.IsLittleEndian)
+                                Array.Reverse(fileIdBytes);
+                            var fileId = BitConverter.ToInt32(fileIdBytes, 0);
+                            var nickLenBytes = new byte[2];
+                            await stream.ReadExactlyAsync(nickLenBytes);
+                            if (BitConverter.IsLittleEndian)
+                                Array.Reverse(nickLenBytes);
+                            var nickLen = BitConverter.ToInt16(nickLenBytes, 0);
+                            if (nickLen < 0 || nickLen > 512)
+                            {
+                                continue;
+                            }
+                            var nickBytes = new byte[nickLen];
+                            await stream.ReadExactlyAsync(nickBytes);
+                            var requesterNick = Encoding.UTF8.GetString(nickBytes);
+                            await server.ProcessFileDownloadRequestAsync(stream, fileId, requesterNick);
+                        }
                     }
                     finally
                     {

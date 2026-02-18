@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using ChatContracts;
 using ChatServer.Database;
@@ -416,6 +417,47 @@ namespace ChatServer.Core
                 };
                 await _messageSource.SendAsync(fileAvailable, recipientEp);
             }
+        }
+
+        public async Task ProcessFileDownloadRequestAsync(Stream stream, int fileId, string? requesterNick, CancellationToken cancellationToken = default)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+            var file = await context.Files
+                .Include(f => f.Recipient)
+                .FirstOrDefaultAsync(f => f.Id == fileId, cancellationToken);
+            if (file == null)
+            {
+                await WriteDownloadErrorAndCloseAsync(stream);
+                return;
+            }
+            var recipientName = file.Recipient?.FullName;
+            if (string.IsNullOrEmpty(requesterNick) || !string.Equals(recipientName, requesterNick.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                await WriteDownloadErrorAndCloseAsync(stream);
+                return;
+            }
+            var length = file.Content.LongLength;
+            var lengthBytes = BitConverter.GetBytes(length);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(lengthBytes);
+            await stream.WriteAsync(lengthBytes, cancellationToken);
+            var nameBytes = Encoding.UTF8.GetBytes(file.FileName ?? "");
+            var nameLen = (ushort)Math.Min(nameBytes.Length, 65535);
+            var nameLenBytes = BitConverter.GetBytes(nameLen);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(nameLenBytes);
+            await stream.WriteAsync(nameLenBytes, cancellationToken);
+            if (nameLen > 0)
+                await stream.WriteAsync(nameBytes.AsMemory(0, nameLen), cancellationToken);
+            await stream.WriteAsync(file.Content, cancellationToken);
+        }
+
+        private static async Task WriteDownloadErrorAndCloseAsync(Stream stream)
+        {
+            var lengthBytes = BitConverter.GetBytes(0L);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(lengthBytes);
+            await stream.WriteAsync(lengthBytes);
         }
     }
 }

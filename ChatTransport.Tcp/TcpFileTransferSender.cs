@@ -11,6 +11,7 @@ namespace ChatTransport.Tcp
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Parse(host), port, cancellationToken);
             await using var stream = client.GetStream();
+            stream.WriteByte(TcpFileTransferReceiver.ModeUpload);
             var lengthBytes = BitConverter.GetBytes(length);
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(lengthBytes);

@@ -9,6 +9,7 @@ namespace ChatContracts
         Unauthorized,
         UserNotFound,
         NickTaken,
-        InvalidNick
+        InvalidNick,
+        FileNotFound
     }
 }

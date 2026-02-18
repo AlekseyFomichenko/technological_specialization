@@ -15,6 +15,9 @@ namespace ChatTransport.Tcp
             await Task.CompletedTask;
         }
 
+        public const byte ModeUpload = 0;
+        public const byte ModeDownload = 1;
+
         public async Task<(Stream Stream, long Length)> AcceptAsync(CancellationToken cancellationToken = default)
         {
             if (_listener == null)
@@ -28,6 +31,18 @@ namespace ChatTransport.Tcp
             var length = BitConverter.ToInt64(lengthBytes, 0);
             var stream = new TcpClientOwnedStream(netStream, client);
             return (stream, length);
+        }
+
+        public async Task<(Stream Stream, byte FirstByte)> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_listener == null)
+                throw new InvalidOperationException("Call StartListenAsync first.");
+            var client = await _listener.AcceptTcpClientAsync(cancellationToken);
+            var netStream = client.GetStream();
+            var firstByteBytes = new byte[1];
+            await netStream.ReadExactlyAsync(firstByteBytes, cancellationToken);
+            var stream = new TcpClientOwnedStream(netStream, client);
+            return (stream, firstByteBytes[0]);
         }
     }
 
