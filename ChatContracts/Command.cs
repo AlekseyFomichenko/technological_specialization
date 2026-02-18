@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,13 @@ namespace ChatContracts
     public enum Command
     {
         Register,
+        Login,
         Message,
-        Confirmation
+        Confirmation,
+        Error,
+        FileOffer,
+        FileAvailable,
+        FileRequest,
+        Ack
     }
 }

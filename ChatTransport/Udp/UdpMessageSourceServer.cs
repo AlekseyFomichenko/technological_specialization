@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -10,10 +10,11 @@ using ChatTransport.Abstracts;
 
 namespace ChatTransport.Udp
 {
-    public class UdpMessageSourceServer : IMessageSourceServer<IPEndPoint>
+    public class UdpMessageSourceServer : IMessageSourceServer
     {
         private readonly UdpClient _udpClient;
-        public UdpMessageSourceServer() => _udpClient = new UdpClient(12345);
+
+        public UdpMessageSourceServer(int port = 12345) => _udpClient = new UdpClient(port);
 
         public IPEndPoint CopyEndPoint(IPEndPoint ep) => new IPEndPoint(ep.Address, ep.Port);
 

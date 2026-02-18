@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="Npgsql" Version="8.0.5" />
-    <ProjectReference Include="..\ChatContracts\ChatContracts.csproj" />
-    <ProjectReference Include="..\ChatServer.Database\ChatServer.Database.csproj" />
     <ProjectReference Include="..\ChatTransport\ChatTransport.csproj" />
   </ItemGroup>
 

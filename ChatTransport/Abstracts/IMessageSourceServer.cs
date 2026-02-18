@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using ChatContracts;
 
 namespace ChatTransport.Abstracts
 {
-    public interface IMessageSourceServer<T>
+    public interface IMessageSourceServer
     {
-        Task SendAsync(NetMessage message, T ep);
-        NetMessage Receive(ref T ep);
-        T CreateEndPoint();
-        T CopyEndPoint(IPEndPoint ep);
+        Task SendAsync(NetMessage message, IPEndPoint ep);
+        NetMessage Receive(ref IPEndPoint ep);
+        IPEndPoint CreateEndPoint();
+        IPEndPoint CopyEndPoint(IPEndPoint ep);
     }
 }

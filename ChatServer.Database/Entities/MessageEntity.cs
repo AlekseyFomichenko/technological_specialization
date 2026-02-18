@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +14,9 @@ namespace ChatServer.Database.Entities
         public bool IsSent { get; set; }
         public int? UserToId { get; set; }
         public int? UserFromId { get; set; }
+        public int? FileId { get; set; }
         public virtual UserEntity? UserTo { get; set; }
         public virtual UserEntity? UserFrom { get; set; }
+        public virtual FileEntity? File { get; set; }
     }
 }
