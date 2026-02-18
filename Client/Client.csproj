@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
     <ProjectReference Include="..\ChatContracts\ChatContracts.csproj" />
     <ProjectReference Include="..\ChatTransport\ChatTransport.csproj" />
+    <ProjectReference Include="..\ChatTransport.Tcp\ChatTransport.Tcp.csproj" />
   </ItemGroup>
 
 </Project>

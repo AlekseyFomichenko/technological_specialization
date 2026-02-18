@@ -1,21 +1,29 @@
 using System.Net;
 using ChatContracts;
 using ChatTransport.Abstracts;
+using ChatTransport.Tcp;
 using Microsoft.Extensions.Configuration;
 
 namespace Client
 {
     public class ClientApp
     {
+        private const long MaxFileSizeBytes = 500L * 1024 * 1024;
+        private const int FileOfferTimeoutMs = 30000;
+
         private readonly IMessageSourceClient _messageSource;
+        private readonly IFileTransferSender _fileSender;
         private readonly string _serverHost;
         private readonly int _tcpFilePort;
         private string? _nick;
         private bool _running = true;
+        private TaskCompletionSource<NetMessage?>? _pendingFileOfferTcs;
+        private readonly object _pendingFileOfferLock = new();
 
         public ClientApp(IMessageSourceClient messageSource, IConfiguration config)
         {
             _messageSource = messageSource;
+            _fileSender = new TcpFileTransferSender();
             _serverHost = config["ServerHost"] ?? "127.0.0.1";
             _tcpFilePort = int.TryParse(config["ServerTcpFilePort"], out var tp) ? tp : 12346;
         }
@@ -138,8 +146,27 @@ namespace Client
                                 await _messageSource.SendAsync(confirmation, _messageSource.GetServer());
                             }
                             break;
+                        case Command.Ack:
+                            lock (_pendingFileOfferLock)
+                            {
+                                if (_pendingFileOfferTcs != null)
+                                {
+                                    _pendingFileOfferTcs.TrySetResult(null);
+                                    _pendingFileOfferTcs = null;
+                                }
+                            }
+                            break;
                         case Command.Error:
-                            Console.WriteLine($"[Error] {(msg.ErrorCode?.ToString() ?? "?")}: {msg.ErrorDescription ?? ""}");
+                            lock (_pendingFileOfferLock)
+                            {
+                                if (_pendingFileOfferTcs != null)
+                                {
+                                    _pendingFileOfferTcs.TrySetResult(msg);
+                                    _pendingFileOfferTcs = null;
+                                }
+                                else
+                                    Console.WriteLine($"[Error] {(msg.ErrorCode?.ToString() ?? "?")}: {msg.ErrorDescription ?? ""}");
+                            }
                             break;
                         case Command.FileAvailable:
                             Console.WriteLine($"[File] From {msg.NickNameFrom}: {msg.FileName} (id={msg.FileId})");
@@ -167,10 +194,15 @@ namespace Client
                     _running = false;
                     break;
                 }
+                if (line.StartsWith("file ", StringComparison.OrdinalIgnoreCase))
+                {
+                    await SendFileAsync(line.Substring(5).Trim());
+                    continue;
+                }
                 var colon = line.IndexOf(':');
                 if (colon <= 0)
                 {
-                    Console.WriteLine("Use: recipient: message");
+                    Console.WriteLine("Use: recipient: message  or  file recipient: path");
                     continue;
                 }
                 var to = line[..colon].Trim();
@@ -184,6 +216,84 @@ namespace Client
                     Date = DateTime.UtcNow
                 };
                 await _messageSource.SendAsync(msg, _messageSource.GetServer());
+            }
+        }
+
+        private async Task SendFileAsync(string recipientAndPath)
+        {
+            var colon = recipientAndPath.IndexOf(':');
+            if (colon <= 0)
+            {
+                Console.WriteLine("Use: file recipient: path");
+                return;
+            }
+            var to = recipientAndPath[..colon].Trim();
+            var path = recipientAndPath[(colon + 1)..].Trim();
+            if (string.IsNullOrEmpty(to) || string.IsNullOrEmpty(path))
+            {
+                Console.WriteLine("Use: file recipient: path");
+                return;
+            }
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("File not found: " + path);
+                return;
+            }
+            var fileInfo = new FileInfo(path);
+            if (fileInfo.Length == 0 || fileInfo.Length > MaxFileSizeBytes)
+            {
+                Console.WriteLine("File size must be 1..500 MB.");
+                return;
+            }
+            var fileName = fileInfo.Name;
+            var fileOffer = new NetMessage
+            {
+                Command = Command.FileOffer,
+                NickNameFrom = _nick,
+                NickNameTo = to,
+                FileName = fileName,
+                FileSize = fileInfo.Length,
+                MimeType = null,
+                Date = DateTime.UtcNow,
+                EndPoint = _messageSource.GetServer()
+            };
+            await _messageSource.SendAsync(fileOffer, _messageSource.GetServer());
+
+            TaskCompletionSource<NetMessage?> tcs;
+            lock (_pendingFileOfferLock)
+            {
+                _pendingFileOfferTcs = new TaskCompletionSource<NetMessage?>();
+                tcs = _pendingFileOfferTcs;
+            }
+            var completed = await Task.WhenAny(tcs.Task, Task.Delay(FileOfferTimeoutMs));
+            NetMessage? errorMsg = null;
+            lock (_pendingFileOfferLock)
+            {
+                if (completed == tcs.Task && tcs.Task.IsCompletedSuccessfully)
+                    errorMsg = tcs.Task.Result;
+                else if (completed != tcs.Task)
+                {
+                    tcs.TrySetCanceled();
+                    _pendingFileOfferTcs = null;
+                    Console.WriteLine("File send timed out.");
+                    return;
+                }
+                _pendingFileOfferTcs = null;
+            }
+            if (errorMsg != null)
+            {
+                Console.WriteLine("File send failed: " + (errorMsg.ErrorDescription ?? errorMsg.ErrorCode?.ToString() ?? "Error"));
+                return;
+            }
+            try
+            {
+                await using (var stream = File.OpenRead(path))
+                    await _fileSender.SendAsync(_serverHost, _tcpFilePort, stream, fileInfo.Length);
+                Console.WriteLine("File sent.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("File send error: " + ex.Message);
             }
         }
 
