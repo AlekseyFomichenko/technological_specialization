@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Server.Models;
 
 namespace Server.Data.Abstracts
 {
     internal interface IMessageRepository
     {
+        Task AddAsync(Message message, CancellationToken cancellationToken = default);
+        Task UpdateDeliveredAsync(Guid messageId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<Message>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default);
     }
 }

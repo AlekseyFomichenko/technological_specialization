@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Server.Models;
 
 namespace Server.Data.Abstracts
 {
     internal interface IUserRepository
     {
+        Task<User?> GetByLoginAsync(string login, CancellationToken cancellationToken = default);
+        Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task AddAsync(User user, CancellationToken cancellationToken = default);
     }
 }
