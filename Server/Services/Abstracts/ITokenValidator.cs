@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server.Services
+namespace Server.Services.Abstracts
 {
     internal interface ITokenValidator
     {

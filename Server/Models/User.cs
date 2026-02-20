@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server.Services.Abstracts
+namespace Server.Models
 {
-    internal interface IConnectionAcceptPolicy
+    internal class User
     {
     }
 }
