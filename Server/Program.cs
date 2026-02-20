@@ -1,22 +1,14 @@
-﻿using Network;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-
 namespace Server
 {
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            try
-            {
-                ServerCode.Server();
-            }
-            catch (OperationCanceledException e)
-            {
-                Console.WriteLine("Сервер завершил работу.");
-            }
+            var builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddHostedService<Worker>();
+
+            var host = builder.Build();
+            host.Run();
         }
     }
 }
