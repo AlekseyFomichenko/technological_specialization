@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\" />
+    <Folder Include="Data\Migrations\" />
     <Folder Include="Protocol\" />
   </ItemGroup>
 </Project>
