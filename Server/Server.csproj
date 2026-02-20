@@ -13,6 +13,5 @@
 
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
-    <Folder Include="Protocol\" />
   </ItemGroup>
 </Project>
