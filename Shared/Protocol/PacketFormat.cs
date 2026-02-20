@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Shared.Protocol
 {
-    internal class PacketFormat
+    public static class PacketFormat
     {
+        public const int HeaderSize = 5;
+
+        public const int MaxPayloadSize = 50 * 1024 * 1024;
     }
 }
