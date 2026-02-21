@@ -1,0 +1,8 @@
+namespace Server.Services
+{
+    internal class FileStorageOptions
+    {
+        public string BasePath { get; set; } = string.Empty;
+        public string[] AllowedExtensions { get; set; } = Array.Empty<string>();
+    }
+}

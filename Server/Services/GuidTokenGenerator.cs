@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Server.Services.Abstracts;
 
 namespace Server.Services
 {
-    internal class GuidTokenGenerator
+    internal class GuidTokenGenerator : ITokenGenerator
     {
+        public string Generate()
+        {
+            return Guid.NewGuid().ToString("N");
+        }
     }
 }
