@@ -1,12 +1,69 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using Server.Services.Abstracts;
+using System.Net;
 
 namespace Server.Services
 {
-    internal class LoginAttemptTracker
+    internal class LoginAttemptTracker : ILoginAttemptTracker
     {
+        private const int MaxAttempts = 5;
+        private static readonly TimeSpan Window = TimeSpan.FromMinutes(5);
+
+        private readonly ConcurrentDictionary<string, List<DateTime>> _attempts = new();
+        private static readonly object ListLock = new();
+
+        public void RecordFailedAttempt(IPAddress ip, string? login)
+        {
+            var now = DateTime.UtcNow;
+            AddAttempt(KeyIp(ip), now);
+            if (!string.IsNullOrEmpty(login))
+                AddAttempt(KeyLogin(login), now);
+        }
+
+        public bool IsBlocked(IPAddress ip, string? login)
+        {
+            return CountInWindow(KeyIp(ip)) >= MaxAttempts
+                || (!string.IsNullOrEmpty(login) && CountInWindow(KeyLogin(login)) >= MaxAttempts);
+        }
+
+        public void ResetOnSuccess(IPAddress ip, string? login)
+        {
+            _attempts.TryRemove(KeyIp(ip), out _);
+            if (!string.IsNullOrEmpty(login))
+                _attempts.TryRemove(KeyLogin(login), out _);
+        }
+
+        private static string KeyIp(IPAddress ip) => "ip:" + ip.ToString();
+        private static string KeyLogin(string login) => "login:" + login;
+
+        private void AddAttempt(string key, DateTime at)
+        {
+            var list = _attempts.GetOrAdd(key, _ => new List<DateTime>());
+            lock (list)
+            {
+                list.Add(at);
+                Prune(list, at - Window);
+            }
+        }
+
+        private int CountInWindow(string key)
+        {
+            if (!_attempts.TryGetValue(key, out var list))
+                return 0;
+            lock (list)
+            {
+                Prune(list, DateTime.UtcNow - Window);
+                return list.Count;
+            }
+        }
+
+        private static void Prune(List<DateTime> list, DateTime before)
+        {
+            for (var i = list.Count - 1; i >= 0; i--)
+            {
+                if (list[i] < before)
+                    list.RemoveAt(i);
+            }
+        }
     }
 }

@@ -1,12 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using Server.Services.Abstracts;
 
 namespace Server.Services
 {
-    internal class ConnectionAcceptPolicy
+    internal class ConnectionAcceptPolicy : IConnectionAcceptPolicy
     {
+        private readonly ConnectionLimitOptions _options;
+
+        public ConnectionAcceptPolicy(IOptions<ConnectionLimitOptions> options)
+        {
+            _options = options.Value;
+        }
+
+        public bool CanAccept(System.Net.IPAddress remoteAddress, int currentConnectionsFromIp, int totalConnections)
+        {
+            return currentConnectionsFromIp < _options.MaxConnectionsPerIp
+                && totalConnections < _options.MaxConnections;
+        }
     }
 }
