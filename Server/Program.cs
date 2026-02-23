@@ -15,17 +15,8 @@ namespace Server
             builder.Services.AddDbContext<ChatDbContext>(options =>
                 options.UseNpgsql(config.GetConnectionString("DefaultConnection") ?? string.Empty));
 
-            builder.Services.Configure<FileStorageOptions>(opts =>
-            {
-                opts.BasePath = config["FileStorage:BasePath"] ?? string.Empty;
-                opts.AllowedExtensions = config.GetSection("Limits:AllowedExtensions").Get<string[]>() ?? Array.Empty<string>();
-            });
-
-            builder.Services.Configure<ConnectionLimitOptions>(opts =>
-            {
-                opts.MaxConnections = config.GetSection("Limits").GetValue("MaxConnections", 100);
-                opts.MaxConnectionsPerIp = config.GetSection("Limits").GetValue("MaxConnectionsPerIp", 3);
-            });
+            builder.Services.Configure<FileStorageOptions>(config.GetSection("FileStorage"));
+            builder.Services.Configure<ConnectionLimitOptions>(config.GetSection("Limits"));
 
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<ISessionRepository, SessionRepository>();

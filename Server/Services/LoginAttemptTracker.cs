@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Server.Services.Abstracts;
 using System.Net;
+using System.Text;
 
 namespace Server.Services
 {
@@ -33,8 +34,8 @@ namespace Server.Services
                 _attempts.TryRemove(KeyLogin(login), out _);
         }
 
-        private static string KeyIp(IPAddress ip) => "ip:" + ip.ToString();
-        private static string KeyLogin(string login) => "login:" + login;
+        private static string KeyIp(IPAddress ip) => "ip:" + (ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4().ToString() : ip.ToString());
+        private static string KeyLogin(string login) => "login:" + login.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormC);
 
         private void AddAttempt(string key, DateTime at)
         {

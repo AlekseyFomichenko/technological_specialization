@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.Extensions.Options;
 using Server.Services.Abstracts;
 
@@ -12,7 +13,7 @@ namespace Server.Services
             _options = options.Value;
         }
 
-        public bool CanAccept(System.Net.IPAddress remoteAddress, int currentConnectionsFromIp, int totalConnections)
+        public bool CanAccept(IPAddress remoteAddress, int currentConnectionsFromIp, int totalConnections)
         {
             return currentConnectionsFromIp < _options.MaxConnectionsPerIp
                 && totalConnections < _options.MaxConnections;
