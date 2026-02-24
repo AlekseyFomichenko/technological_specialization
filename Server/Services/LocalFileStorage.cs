@@ -31,6 +31,19 @@ namespace Server.Services
             return fileName;
         }
 
+        public Task<(Stream WriteStream, string RelativePath)> CreateWriteStreamAsync(string suggestedFileName, CancellationToken cancellationToken = default)
+        {
+            var extension = Path.GetExtension(suggestedFileName);
+            if (string.IsNullOrEmpty(extension) || !Array.Exists(_allowedExtensions, e => string.Equals(e, extension, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("Extension not allowed.", nameof(suggestedFileName));
+
+            Directory.CreateDirectory(_basePath);
+            var fileName = Guid.NewGuid().ToString("N") + extension;
+            var fullPath = Path.Combine(_basePath, fileName);
+            var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
+            return Task.FromResult<(Stream, string)>((stream, fileName));
+        }
+
         public Task<Stream> OpenReadAsync(string relativePath, CancellationToken cancellationToken = default)
         {
             var fullPath = GetFullPathAndValidate(relativePath);

@@ -32,7 +32,7 @@ namespace Server.Services
         {
             User? receiver = await _userRepository.GetByIdAsync(payload.ReceiverId, cancellationToken).ConfigureAwait(false);
             if (receiver is null)
-                return SendMessageResult.Fail(MessageErrorCodes.ReceiverNotFound, "Receiver not found.");
+                return SendMessageResult.Fail(ErrorCodes.ReceiverNotFound, "Receiver not found.");
 
             var message = new Message
             {

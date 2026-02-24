@@ -32,6 +32,7 @@ namespace Server
             builder.Services.AddSingleton<IMessageDelivery, MessageDeliveryStub>();
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<MessageService>();
+            builder.Services.AddScoped<FileTransferService>();
 
             builder.Services.AddHostedService<Worker>();
 

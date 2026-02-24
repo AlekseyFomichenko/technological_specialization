@@ -1,9 +1,9 @@
 namespace Shared.DTO
 {
-    public class FileStartPayload
+    public class FileAvailablePayload
     {
-        public string Token { get; set; } = string.Empty;
-        public Guid ReceiverId { get; set; }
+        public Guid FileId { get; set; }
+        public Guid SenderId { get; set; }
         public string FileName { get; set; } = string.Empty;
         public long FileSize { get; set; }
     }
