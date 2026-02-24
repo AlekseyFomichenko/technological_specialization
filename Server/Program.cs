@@ -31,6 +31,7 @@ namespace Server
             builder.Services.AddSingleton<IConnectionAcceptPolicy, ConnectionAcceptPolicy>();
             builder.Services.AddSingleton<IMessageDelivery, MessageDeliveryStub>();
             builder.Services.AddScoped<AuthService>();
+            builder.Services.AddScoped<MessageService>();
 
             builder.Services.AddHostedService<Worker>();
 
