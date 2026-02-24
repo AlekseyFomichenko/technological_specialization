@@ -7,7 +7,7 @@ using Shared.Models;
 
 namespace Server.Services
 {
-    internal class MessageService
+    internal class MessageService : IMessageService
     {
         private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 

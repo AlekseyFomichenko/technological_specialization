@@ -6,7 +6,7 @@ using Shared.DTO;
 
 namespace Server.Services
 {
-    internal class AuthService
+    internal class AuthService : IAuthService
     {
         private const int MinLoginLength = 3;
         private const int MinPasswordLength = 6;
@@ -104,7 +104,7 @@ namespace Server.Services
                 ExpiresAt = DateTime.UtcNow.AddHours(SessionLifetimeHours)
             };
             await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
-            return LoginResult.Ok(new LoginResponse { Token = session.Token });
+            return LoginResult.Ok(new LoginResponse { Token = session.Token }, user.Id);
         }
     }
 }

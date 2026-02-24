@@ -16,5 +16,8 @@ namespace Server.Services
         public const string ExtensionNotAllowed = "EXTENSION_NOT_ALLOWED";
         public const string SizeExceeded = "SIZE_EXCEEDED";
         public const string NoActiveReceive = "NO_ACTIVE_RECEIVE";
+
+        public const string InvalidInput = "INVALID_INPUT";
+        public const string InvalidState = "INVALID_STATE";
     }
 }

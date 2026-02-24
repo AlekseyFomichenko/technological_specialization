@@ -9,7 +9,7 @@ using Shared.Models;
 
 namespace Server.Services
 {
-    internal class FileTransferService
+    internal class FileTransferService : IFileTransferService
     {
         private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 

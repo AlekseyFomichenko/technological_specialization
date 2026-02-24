@@ -17,6 +17,7 @@ namespace Server
 
             builder.Services.Configure<FileStorageOptions>(config.GetSection("FileStorage"));
             builder.Services.Configure<ConnectionLimitOptions>(config.GetSection("Limits"));
+            builder.Services.Configure<ServerSessionOptions>(config.GetSection("Server"));
 
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<ISessionRepository, SessionRepository>();
@@ -30,9 +31,9 @@ namespace Server
             builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
             builder.Services.AddSingleton<IConnectionAcceptPolicy, ConnectionAcceptPolicy>();
             builder.Services.AddSingleton<IMessageDelivery, MessageDeliveryStub>();
-            builder.Services.AddScoped<AuthService>();
-            builder.Services.AddScoped<MessageService>();
-            builder.Services.AddScoped<FileTransferService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IMessageService, MessageService>();
+            builder.Services.AddScoped<IFileTransferService, FileTransferService>();
 
             builder.Services.AddHostedService<Worker>();
 
