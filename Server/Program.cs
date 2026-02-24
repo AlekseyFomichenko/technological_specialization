@@ -30,6 +30,7 @@ namespace Server
             builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
             builder.Services.AddSingleton<IConnectionAcceptPolicy, ConnectionAcceptPolicy>();
             builder.Services.AddSingleton<IMessageDelivery, MessageDeliveryStub>();
+            builder.Services.AddScoped<AuthService>();
 
             builder.Services.AddHostedService<Worker>();
 

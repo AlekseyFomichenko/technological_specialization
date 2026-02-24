@@ -1,3 +1,4 @@
+using System.Net;
 using Server.Data.Abstracts;
 using Server.Models;
 using Server.Services.Abstracts;
@@ -9,15 +10,7 @@ namespace Server.Services
     {
         private const int MinLoginLength = 3;
         private const int MinPasswordLength = 6;
-
-        private static class ErrorCodes
-        {
-            internal const string LoginRequired = "LOGIN_REQUIRED";
-            internal const string PasswordRequired = "PASSWORD_REQUIRED";
-            internal const string LoginTooShort = "LOGIN_TOO_SHORT";
-            internal const string PasswordTooWeak = "PASSWORD_TOO_WEAK";
-            internal const string LoginTaken = "LOGIN_TAKEN";
-        }
+        private const int SessionLifetimeHours = 24;
 
         private readonly IUserRepository _userRepository;
         private readonly ISessionRepository _sessionRepository;
@@ -48,20 +41,20 @@ namespace Server.Services
         public async Task<RegisterResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(request.Login))
-                return RegisterResult.Fail(ErrorCodes.LoginRequired, "Login is required.");
+                return RegisterResult.Fail(AuthErrorCodes.LoginRequired, "Login is required.");
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                return RegisterResult.Fail(ErrorCodes.PasswordRequired, "Password is required.");
+                return RegisterResult.Fail(AuthErrorCodes.PasswordRequired, "Password is required.");
 
             if (request.Login.Length < MinLoginLength)
-                return RegisterResult.Fail(ErrorCodes.LoginTooShort, $"Login must be at least {MinLoginLength} characters.");
+                return RegisterResult.Fail(AuthErrorCodes.LoginTooShort, $"Login must be at least {MinLoginLength} characters.");
 
             if (request.Password.Length < MinPasswordLength)
-                return RegisterResult.Fail(ErrorCodes.PasswordTooWeak, $"Password must be at least {MinPasswordLength} characters.");
+                return RegisterResult.Fail(AuthErrorCodes.PasswordTooWeak, $"Password must be at least {MinPasswordLength} characters.");
 
             User? existing = await _userRepository.GetByLoginAsync(request.Login, cancellationToken).ConfigureAwait(false);
             if (existing is not null)
-                return RegisterResult.Fail(ErrorCodes.LoginTaken, "Login is already taken.");
+                return RegisterResult.Fail(AuthErrorCodes.LoginTaken, "Login is already taken.");
 
             string hash = _passwordHasher.Hash(request.Password);
             var user = new User
@@ -74,6 +67,44 @@ namespace Server.Services
 
             await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
             return RegisterResult.Ok();
+        }
+
+        public async Task<LoginResult> LoginAsync(LoginRequest request, IPAddress? clientIp, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(request.Login))
+                return LoginResult.Fail(AuthErrorCodes.LoginRequired, "Login is required.");
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+                return LoginResult.Fail(AuthErrorCodes.PasswordRequired, "Password is required.");
+
+            if (_loginAttemptTracker.IsBlocked(clientIp, request.Login))
+                return LoginResult.Fail(AuthErrorCodes.Blocked, "Too many failed attempts. Try again later.");
+
+            User? user = await _userRepository.GetByLoginAsync(request.Login, cancellationToken).ConfigureAwait(false);
+            if (user is null)
+            {
+                _loginAttemptTracker.RecordFailedAttempt(clientIp, request.Login);
+                _logger.LogWarning("Failed login attempt for login '{Login}' from {Ip}", request.Login, clientIp?.ToString() ?? "unknown");
+                return LoginResult.Fail(AuthErrorCodes.InvalidCredentials, "Invalid login or password.");
+            }
+
+            if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
+            {
+                _loginAttemptTracker.RecordFailedAttempt(clientIp, request.Login);
+                _logger.LogWarning("Failed login attempt for login '{Login}' from {Ip}", request.Login, clientIp?.ToString() ?? "unknown");
+                return LoginResult.Fail(AuthErrorCodes.InvalidCredentials, "Invalid login or password.");
+            }
+
+            _loginAttemptTracker.ResetOnSuccess(clientIp, request.Login);
+            var session = new Session
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = _tokenGenerator.Generate(),
+                ExpiresAt = DateTime.UtcNow.AddHours(SessionLifetimeHours)
+            };
+            await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+            return LoginResult.Ok(new LoginResponse { Token = session.Token });
         }
     }
 }

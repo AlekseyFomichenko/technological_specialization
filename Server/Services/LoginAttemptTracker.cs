@@ -13,23 +13,28 @@ namespace Server.Services
         private readonly ConcurrentDictionary<string, List<DateTime>> _attempts = new();
         private static readonly object ListLock = new();
 
-        public void RecordFailedAttempt(IPAddress ip, string? login)
+        public void RecordFailedAttempt(IPAddress? ip, string? login)
         {
             var now = DateTime.UtcNow;
-            AddAttempt(KeyIp(ip), now);
+            if (ip is not null)
+                AddAttempt(KeyIp(ip), now);
             if (!string.IsNullOrEmpty(login))
                 AddAttempt(KeyLogin(login), now);
         }
 
-        public bool IsBlocked(IPAddress ip, string? login)
+        public bool IsBlocked(IPAddress? ip, string? login)
         {
-            return CountInWindow(KeyIp(ip)) >= MaxAttempts
-                || (!string.IsNullOrEmpty(login) && CountInWindow(KeyLogin(login)) >= MaxAttempts);
+            if (ip is not null && CountInWindow(KeyIp(ip)) >= MaxAttempts)
+                return true;
+            if (!string.IsNullOrEmpty(login) && CountInWindow(KeyLogin(login)) >= MaxAttempts)
+                return true;
+            return false;
         }
 
-        public void ResetOnSuccess(IPAddress ip, string? login)
+        public void ResetOnSuccess(IPAddress? ip, string? login)
         {
-            _attempts.TryRemove(KeyIp(ip), out _);
+            if (ip is not null)
+                _attempts.TryRemove(KeyIp(ip), out _);
             if (!string.IsNullOrEmpty(login))
                 _attempts.TryRemove(KeyLogin(login), out _);
         }
