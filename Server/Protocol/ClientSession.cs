@@ -1,10 +1,8 @@
-using System.IO;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Server.Models;
-using Server.Protocol;
 using Server.Services;
 using Server.Services.Abstracts;
 using Shared.DTO;
@@ -29,7 +27,9 @@ namespace Server.Protocol
         private readonly IFileTransferService _fileTransferService;
         private readonly ILogger<ClientSession> _logger;
         private readonly Action<Guid> _onTerminated;
+        private readonly Action<Guid, Guid>? _onAuthenticated;
         private readonly int _inactivityTimeoutMinutes;
+        private readonly SemaphoreSlim _writeLock = new(1, 1);
 
         private ClientSessionState _state;
         private Guid? _userId;
@@ -42,6 +42,7 @@ namespace Server.Protocol
             Stream stream,
             IPAddress? clientIp,
             Action<Guid> onTerminated,
+            Action<Guid, Guid>? onAuthenticated,
             IAuthService authService,
             IMessageService messageService,
             IFileTransferService fileTransferService,
@@ -51,6 +52,7 @@ namespace Server.Protocol
             _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             _clientIp = clientIp;
             _onTerminated = onTerminated ?? throw new ArgumentNullException(nameof(onTerminated));
+            _onAuthenticated = onAuthenticated;
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
             _fileTransferService = fileTransferService ?? throw new ArgumentNullException(nameof(fileTransferService));
@@ -61,6 +63,30 @@ namespace Server.Protocol
             _state = ClientSessionState.Connected;
             _reader = new PacketReader(stream);
             _writer = new PacketWriter(stream);
+        }
+
+        public async Task<bool> TrySendAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
+        {
+            await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (_state == ClientSessionState.Terminated)
+                    return false;
+                await _writer.WritePacketAsync(type, payload, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
         }
 
         public async Task RunAsync(CancellationToken cancellationToken = default)
@@ -199,6 +225,7 @@ namespace Server.Protocol
                 _state = ClientSessionState.Authenticated;
                 byte[] responseBytes = JsonSerializer.SerializeToUtf8Bytes(result.Response, JsonOptions);
                 await _writer.WritePacketAsync(MessageType.Login, responseBytes, cancellationToken).ConfigureAwait(false);
+                _onAuthenticated?.Invoke(ConnectionId, userId);
                 return true;
             }
             if (result.ErrorCode == ErrorCodes.Blocked)
@@ -305,18 +332,18 @@ namespace Server.Protocol
             return true;
         }
 
-        private Task SendErrorAsync(string code, string message)
+        private async Task SendErrorAsync(string code, string message)
         {
             var error = new ErrorPayload { Code = code, Message = message };
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(error, JsonOptions);
-            return _writer.WritePacketAsync(MessageType.Error, bytes, CancellationToken.None);
+            await _writer.WritePacketAsync(MessageType.Error, bytes, CancellationToken.None).ConfigureAwait(false);
         }
 
-        private Task SendAckAsync(bool success, Guid? id)
+        private async Task SendAckAsync(bool success, Guid? id)
         {
             var ack = new AckPayload { Success = success, Id = id };
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(ack, JsonOptions);
-            return _writer.WritePacketAsync(MessageType.Ack, bytes, CancellationToken.None);
+            await _writer.WritePacketAsync(MessageType.Ack, bytes, CancellationToken.None).ConfigureAwait(false);
         }
 
         private async Task TerminateAsync(CancellationToken cancellationToken)

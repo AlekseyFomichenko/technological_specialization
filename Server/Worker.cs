@@ -1,23 +1,43 @@
+using System.Net;
+using System.Net.Sockets;
+using Microsoft.Extensions.Options;
+using Server.Services;
+using Server.Services.Abstracts;
+
 namespace Server
 {
-    public class Worker : BackgroundService
+    internal sealed class Worker : BackgroundService
     {
+        private readonly IClientConnectionManager _manager;
+        private readonly IOptions<ServerSessionOptions> _options;
         private readonly ILogger<Worker> _logger;
 
-        public Worker(ILogger<Worker> logger)
+        public Worker(
+            IClientConnectionManager manager,
+            IOptions<ServerSessionOptions> options,
+            ILogger<Worker> logger)
         {
-            _logger = logger;
+            _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken ct)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            int port = _options.Value.Port;
+            var listener = new TcpListener(IPAddress.Any, port);
+            listener.Start();
+            try
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                while (!ct.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    TcpClient client = await listener.AcceptTcpClientAsync(ct).ConfigureAwait(false);
+                    await _manager.AcceptAsync(client, ct).ConfigureAwait(false);
                 }
-                await Task.Delay(1000, stoppingToken);
+            }
+            finally
+            {
+                listener.Stop();
             }
         }
     }

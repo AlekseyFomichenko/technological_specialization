@@ -30,7 +30,10 @@ namespace Server
             builder.Services.AddScoped<ITokenValidator, SessionTokenValidator>();
             builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
             builder.Services.AddSingleton<IConnectionAcceptPolicy, ConnectionAcceptPolicy>();
-            builder.Services.AddSingleton<IMessageDelivery, MessageDeliveryStub>();
+            builder.Services.AddScoped<IClientSessionFactory, ClientSessionFactory>();
+            builder.Services.AddSingleton<ClientConnectionManager>();
+            builder.Services.AddSingleton<IClientConnectionManager>(sp => sp.GetRequiredService<ClientConnectionManager>());
+            builder.Services.AddSingleton<IMessageDelivery>(sp => sp.GetRequiredService<ClientConnectionManager>());
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<IFileTransferService, FileTransferService>();
