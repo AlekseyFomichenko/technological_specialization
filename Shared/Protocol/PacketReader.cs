@@ -1,11 +1,14 @@
 using System.Buffers.Binary;
 using System.IO;
 using Shared.Models;
-using Shared.Protocol;
 
-namespace Server.Protocol
+namespace Shared.Protocol
 {
-    internal sealed class PacketReader
+    /// <summary>
+    /// Читает один пакет: 1 байт тип, 4 байта длина (little-endian), N байт payload.
+    /// При неизвестном типе или неверной длине — <see cref="ProtocolException"/>; при обрыве потока — <see cref="System.IO.IOException"/>.
+    /// </summary>
+    public sealed class PacketReader
     {
         private readonly Stream _stream;
 
@@ -15,8 +18,7 @@ namespace Server.Protocol
         }
 
         /// <summary>
-        /// Читает один пакет: 1 байт тип, 4 байта длина (little-endian), N байт payload.
-        /// При неизвестном типе или неверной длине — <see cref="ProtocolException"/>; при обрыве — <see cref="IOException"/>.
+        /// Читает один пакет. При length &gt; MaxPayloadSize тело не читается, выбрасывается <see cref="ProtocolException"/>.
         /// </summary>
         public async Task<(MessageType Type, byte[] Payload)> ReadPacketAsync(CancellationToken cancellationToken = default)
         {

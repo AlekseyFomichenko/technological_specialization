@@ -1,11 +1,13 @@
 using System.Buffers.Binary;
-using System.IO;
 using Shared.Models;
-using Shared.Protocol;
 
-namespace Server.Protocol
+namespace Shared.Protocol
 {
-    internal sealed class PacketWriter
+    /// <summary>
+    /// Записывает пакет: 1 байт тип, 4 байта длина payload (little-endian), N байт payload; затем flush после каждой записи.
+    /// Размер payload не более <see cref="PacketFormat.MaxPayloadSize"/>.
+    /// </summary>
+    public sealed class PacketWriter
     {
         private readonly Stream _stream;
 
@@ -15,7 +17,7 @@ namespace Server.Protocol
         }
 
         /// <summary>
-        /// Записывает пакет: 1 байт тип, 4 байта длина payload (little-endian), N байт payload; затем flush.
+        /// Записывает пакет и выполняет flush.
         /// </summary>
         public async Task WritePacketAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
         {

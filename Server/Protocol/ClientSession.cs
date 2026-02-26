@@ -7,6 +7,7 @@ using Server.Services;
 using Server.Services.Abstracts;
 using Shared.DTO;
 using Shared.Models;
+using Shared.Protocol;
 
 namespace Server.Protocol
 {
