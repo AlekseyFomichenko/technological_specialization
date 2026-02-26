@@ -2,45 +2,132 @@ using Client.Services;
 
 namespace Client.UI
 {
-    internal static class MainMenu
+    public sealed class MainMenu
     {
+        private const int MinLoginLength = 3;
+        private const int MaxLoginLength = 100;
+        private const int MinPasswordLength = 6;
+        private const int MaxPasswordLength = 128;
+
+        private readonly AppSession _session;
+
+        public MainMenu(AppSession session)
+        {
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+        }
+
         /// <summary>
         /// Returns true to exit app, false to proceed to chat.
         /// </summary>
-        public static async Task<bool> RunAsync(AppSession session)
+        public async Task<bool> RunAsync(CancellationToken cancellationToken = default)
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 Console.WriteLine("1. Register  2. Login  3. Exit");
                 var line = Console.ReadLine()?.Trim() ?? "";
+                if (cancellationToken.IsCancellationRequested)
+                    return true;
                 if (line == "3")
                     return true;
                 if (line == "1")
                 {
-                    Console.Write("Login: ");
-                    var login = Console.ReadLine() ?? "";
-                    Console.Write("Password: ");
-                    var password = ReadPassword();
-                    var result = await session.AuthClient.RegisterAsync(login, password).ConfigureAwait(false);
-                    Console.WriteLine(result.Success ? "Registered." : $"{result.ErrorCode}: {result.ErrorMessage}");
+                    await RunRegisterFlowAsync(cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (line == "2")
                 {
-                    Console.Write("Login: ");
-                    var login = Console.ReadLine() ?? "";
-                    Console.Write("Password: ");
-                    var password = ReadPassword();
-                    var result = await session.AuthClient.LoginAsync(login, password).ConfigureAwait(false);
-                    if (result.Success)
-                    {
-                        Console.WriteLine("Logged in.");
+                    var proceed = await RunLoginFlowAsync(cancellationToken).ConfigureAwait(false);
+                    if (proceed)
                         return false;
-                    }
-                    Console.WriteLine($"{result.ErrorCode}: {result.ErrorMessage}");
                     continue;
                 }
             }
+            return true;
+        }
+
+        private async Task RunRegisterFlowAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                Console.Write("Login: ");
+                var login = Console.ReadLine()?.Trim() ?? "";
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+                if (string.IsNullOrEmpty(login))
+                {
+                    WriteError("Login is required.");
+                    continue;
+                }
+                if (login.Length < MinLoginLength || login.Length > MaxLoginLength)
+                {
+                    WriteError($"Login must be between {MinLoginLength} and {MaxLoginLength} characters.");
+                    continue;
+                }
+                Console.Write("Password: ");
+                var password = ReadPassword();
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+                if (string.IsNullOrEmpty(password))
+                {
+                    WriteError("Password is required.");
+                    continue;
+                }
+                if (password.Length < MinPasswordLength || password.Length > MaxPasswordLength)
+                {
+                    WriteError($"Password must be between {MinPasswordLength} and {MaxPasswordLength} characters.");
+                    continue;
+                }
+                var result = await _session.AuthClient.RegisterAsync(login, password, cancellationToken).ConfigureAwait(false);
+                if (result.Success)
+                {
+                    WriteSystem("Registered.");
+                    return;
+                }
+                WriteError($"{result.ErrorCode}: {result.ErrorMessage}");
+            }
+        }
+
+        private async Task<bool> RunLoginFlowAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                Console.Write("Login: ");
+                var login = Console.ReadLine()?.Trim() ?? "";
+                if (cancellationToken.IsCancellationRequested)
+                    return false;
+                if (string.IsNullOrEmpty(login))
+                {
+                    WriteError("Login is required.");
+                    continue;
+                }
+                if (login.Length < MinLoginLength || login.Length > MaxLoginLength)
+                {
+                    WriteError($"Login must be between {MinLoginLength} and {MaxLoginLength} characters.");
+                    continue;
+                }
+                Console.Write("Password: ");
+                var password = ReadPassword();
+                if (cancellationToken.IsCancellationRequested)
+                    return false;
+                if (string.IsNullOrEmpty(password))
+                {
+                    WriteError("Password is required.");
+                    continue;
+                }
+                if (password.Length < MinPasswordLength || password.Length > MaxPasswordLength)
+                {
+                    WriteError($"Password must be between {MinPasswordLength} and {MaxPasswordLength} characters.");
+                    continue;
+                }
+                var result = await _session.AuthClient.LoginAsync(login, password, cancellationToken).ConfigureAwait(false);
+                if (result.Success)
+                {
+                    WriteSystem("Logged in.");
+                    return true;
+                }
+                WriteError($"{result.ErrorCode}: {result.ErrorMessage}");
+            }
+            return false;
         }
 
         private static string ReadPassword()
@@ -58,6 +145,22 @@ namespace Client.UI
             }
             Console.WriteLine();
             return pass;
+        }
+
+        private static void WriteError(string message)
+        {
+            var prev = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(message);
+            Console.ForegroundColor = prev;
+        }
+
+        private static void WriteSystem(string message)
+        {
+            var prev = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(message);
+            Console.ForegroundColor = prev;
         }
     }
 }

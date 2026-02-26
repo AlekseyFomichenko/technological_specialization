@@ -11,11 +11,25 @@ internal class Program
         var options = ClientOptionsLoader.Load(args);
         using var session = new AppSession(options);
 
-        session.OnDisconnected += (_, _) => Console.WriteLine("Disconnected from server.");
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
+        session.OnDisconnected += (_, _) =>
+        {
+            var prev = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Disconnected from server.");
+            Console.ForegroundColor = prev;
+            cts.Cancel();
+        };
 
         try
         {
-            await session.ConnectAsync().ConfigureAwait(false);
+            await session.ConnectAsync(cts.Token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -23,12 +37,13 @@ internal class Program
             return;
         }
 
-        var exit = await MainMenu.RunAsync(session).ConfigureAwait(false);
+        var mainMenu = new MainMenu(session);
+        var exit = await mainMenu.RunAsync(cts.Token).ConfigureAwait(false);
         if (exit)
             return;
 
-        using var cts = new CancellationTokenSource();
         session.StartReadLoop(cts.Token);
-        await ChatScreen.RunAsync(session, cts.Token).ConfigureAwait(false);
+        var chatScreen = new ChatScreen(session);
+        await chatScreen.RunAsync(cts.Token).ConfigureAwait(false);
     }
 }

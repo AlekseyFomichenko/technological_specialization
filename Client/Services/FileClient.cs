@@ -17,6 +17,12 @@ namespace Client.Services
         private FileStream? _receiveStream;
         private long _receiveTotal;
         private long _receiveWritten;
+        private string? _receiveFilePath;
+        private string? _receiveFileName;
+        private Guid _receiveSenderId;
+
+        public event EventHandler<(string FileName, Guid SenderId)>? FileReceiveStarted;
+        public event EventHandler<(string FileName, string SavedPath)>? FileReceiveCompleted;
 
         public FileClient(PacketWriter writer, ClientOptions options, PendingResponse pending, SessionContext sessionContext)
         {
@@ -85,10 +91,14 @@ namespace Client.Services
                 if (string.IsNullOrEmpty(safeName))
                     safeName = payload.FileId.ToString();
                 var path = Path.Combine(dir, safeName);
+                _receiveFilePath = path;
+                _receiveFileName = safeName;
+                _receiveSenderId = payload.SenderId;
                 _receiveStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
                 _receiveTotal = payload.FileSize;
                 _receiveWritten = 0;
             }
+            FileReceiveStarted?.Invoke(this, (payload.FileName, payload.SenderId));
         }
 
         public void ReceiveChunk(byte[] payload)
@@ -110,13 +120,21 @@ namespace Client.Services
 
         public void EndReceive(FileEndPayload? _)
         {
+            string? path;
+            string? name;
             lock (_receiveLock)
             {
                 _receiveStream?.Dispose();
                 _receiveStream = null;
+                path = _receiveFilePath;
+                name = _receiveFileName;
+                _receiveFilePath = null;
+                _receiveFileName = null;
                 _receiveTotal = 0;
                 _receiveWritten = 0;
             }
+            if (name is not null && path is not null)
+                FileReceiveCompleted?.Invoke(this, (name, path));
         }
     }
 }
