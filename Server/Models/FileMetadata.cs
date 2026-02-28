@@ -9,5 +9,6 @@ namespace Server.Models
         public string FilePath { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsDelivered { get; set; }
     }
 }

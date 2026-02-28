@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Client.Services;
+using Shared.DTO;
 
 namespace Client.UI
 {
@@ -7,6 +8,7 @@ namespace Client.UI
     {
         private readonly AppSession _session;
         private readonly ConcurrentQueue<string> _incomingQueue = new();
+        private readonly SemaphoreSlim _incomingSignal = new(0);
 
         public ChatScreen(AppSession session)
         {
@@ -21,15 +23,22 @@ namespace Client.UI
 
             try
             {
-                Guid? currentReceiverId = await PromptReceiverIdAsync(cancellationToken).ConfigureAwait(false);
+                Guid? currentReceiverId = PromptReceiverId(cancellationToken);
                 if (!currentReceiverId.HasValue)
                     return;
 
                 PrintHelp();
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    FlushIncoming();
-                    var line = Console.ReadLine();
+                    string? line;
+                    try
+                    {
+                        line = await ReadLineWithIncomingAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                     if (line is null)
                         break;
                     var trimmed = line.Trim();
@@ -49,6 +58,9 @@ namespace Client.UI
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+            }
             finally
             {
                 _session.ChatClient.TextMessageReceived -= OnTextMessageReceived;
@@ -57,31 +69,83 @@ namespace Client.UI
             }
         }
 
-        private void OnTextMessageReceived(object? sender, Shared.DTO.IncomingTextPayload payload)
+        private void OnTextMessageReceived(object? sender, IncomingTextPayload payload)
         {
             _incomingQueue.Enqueue($"[{payload.SenderId}]: {payload.Content}");
+            _incomingSignal.Release();
         }
 
         private void OnFileReceiveStarted(object? sender, (string FileName, Guid SenderId) e)
         {
             _incomingQueue.Enqueue($"[file] {e.FileName} (from {e.SenderId})");
+            _incomingSignal.Release();
         }
 
         private void OnFileReceiveCompleted(object? sender, (string FileName, string SavedPath) e)
         {
             _incomingQueue.Enqueue($"[file] {e.FileName} saved to {e.SavedPath}");
+            _incomingSignal.Release();
         }
 
-        private void FlushIncoming()
+        private void FlushIncoming(string? currentLine = null)
         {
             var prev = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Green;
             while (_incomingQueue.TryDequeue(out var s))
+            {
+                Console.WriteLine();
                 Console.WriteLine(s);
+                if (currentLine is not null)
+                {
+                    Console.Write("> ");
+                    Console.Write(currentLine);
+                }
+            }
             Console.ForegroundColor = prev;
         }
 
-        private static async Task<Guid?> PromptReceiverIdAsync(CancellationToken cancellationToken)
+        private async Task<string?> ReadLineWithIncomingAsync(CancellationToken cancellationToken)
+        {
+            var currentLine = new System.Text.StringBuilder();
+            Console.Write("> ");
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                FlushIncoming(currentLine.Length > 0 ? currentLine.ToString() : "");
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        Console.WriteLine();
+                        return currentLine.ToString();
+                    }
+                    if (key.Key == ConsoleKey.Backspace)
+                    {
+                        if (currentLine.Length > 0)
+                        {
+                            currentLine.Length--;
+                            Console.Write("\b \b");
+                        }
+                        continue;
+                    }
+                    if (key.Key == ConsoleKey.C && (key.Modifiers & ConsoleModifiers.Control) != 0)
+                    {
+                        Console.WriteLine();
+                        return null;
+                    }
+                    if (!char.IsControl(key.KeyChar))
+                    {
+                        currentLine.Append(key.KeyChar);
+                        Console.Write(key.KeyChar);
+                    }
+                    continue;
+                }
+                await _incomingSignal.WaitAsync(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
+            }
+            return null;
+        }
+
+        private static Guid? PromptReceiverId(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -104,6 +168,15 @@ namespace Client.UI
 
             if (cmd == "/exit")
                 return (true, null);
+            if (cmd == "/me")
+            {
+                var userId = _session.SessionContext.UserId;
+                if (userId.HasValue)
+                    WriteSystem($"Your Id: {userId.Value}");
+                else
+                    WriteError("Not logged in.");
+                return (false, null);
+            }
             if (cmd == "/help")
             {
                 PrintHelp();
@@ -164,7 +237,7 @@ namespace Client.UI
 
         private static void PrintHelp()
         {
-            WriteSystem("Commands: /to <receiverId>  /file <path>  /exit  /help");
+            WriteSystem("Commands: /to <receiverId>  /file <path>  /me  /exit  /help");
             WriteSystem("Example: /file \"C:\\My folder\\doc.pdf\"");
         }
 

@@ -80,7 +80,7 @@ namespace Client.UI
                 var result = await _session.AuthClient.RegisterAsync(login, password, cancellationToken).ConfigureAwait(false);
                 if (result.Success)
                 {
-                    WriteSystem("Registered.");
+                    WriteSystem("Registered. Use Login to see your Id.");
                     return;
                 }
                 WriteError($"{result.ErrorCode}: {result.ErrorMessage}");
@@ -123,6 +123,9 @@ namespace Client.UI
                 if (result.Success)
                 {
                     WriteSystem("Logged in.");
+                    var userId = _session.SessionContext.UserId;
+                    if (userId.HasValue)
+                        WriteSystem($"Your Id: {userId.Value}");
                     return true;
                 }
                 WriteError($"{result.ErrorCode}: {result.ErrorMessage}");

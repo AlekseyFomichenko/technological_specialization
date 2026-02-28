@@ -8,5 +8,6 @@ namespace Server.Services.Abstracts
         Task<WriteChunkResult> WriteChunkAsync(Guid connectionId, ReadOnlyMemory<byte> chunk, CancellationToken cancellationToken = default);
         Task<EndFileResult> EndReceivingAsync(Guid connectionId, FileEndPayload? payload, CancellationToken cancellationToken = default);
         Task CancelReceivingAsync(Guid connectionId, CancellationToken cancellationToken = default);
+        Task DeliverPendingFilesForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

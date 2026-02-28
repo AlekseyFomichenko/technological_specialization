@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using Client.Protocol;
 using Shared.DTO;

@@ -122,11 +122,66 @@ namespace Server.Services
             byte[] notificationBytes = JsonSerializer.SerializeToUtf8Bytes(notification, JsonOptions);
             await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileStart, notificationBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
 
+            const int chunkSize = 65536;
+            await using (Stream readStream = await _fileStorage.OpenReadAsync(receive.RelativePath, cancellationToken).ConfigureAwait(false))
+            {
+                var buffer = new byte[chunkSize];
+                int read;
+                while ((read = await readStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            var fileEndPayload = new FileEndPayload();
+            byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
+            await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+
             var ackPayload = new AckPayload { Success = true, Id = fileId };
             byte[] ackBytes = JsonSerializer.SerializeToUtf8Bytes(ackPayload, JsonOptions);
             await _messageDelivery.SendToUserAsync(receive.SenderId, MessageType.Ack, ackBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
 
             return EndFileResult.Ok(fileId);
+        }
+
+        public async Task DeliverPendingFilesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<FileMetadata> undelivered = await _fileMetadataRepository.GetUndeliveredForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+            const int chunkSize = 65536;
+            foreach (FileMetadata metadata in undelivered)
+            {
+                var fileStartPayload = new FileAvailablePayload
+                {
+                    FileId = metadata.Id,
+                    SenderId = metadata.SenderId,
+                    FileName = metadata.FileName,
+                    FileSize = metadata.FileSize
+                };
+                byte[] fileStartBytes = JsonSerializer.SerializeToUtf8Bytes(fileStartPayload, JsonOptions);
+                bool delivered = await _messageDelivery.SendToUserAsync(userId, MessageType.FileStart, fileStartBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+                if (!delivered)
+                    continue;
+                try
+                {
+                    await using (Stream readStream = await _fileStorage.OpenReadAsync(metadata.FilePath, cancellationToken).ConfigureAwait(false))
+                    {
+                        var buffer = new byte[chunkSize];
+                        int read;
+                        while ((read = await readStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                        {
+                            await _messageDelivery.SendToUserAsync(userId, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    var fileEndPayload = new FileEndPayload();
+                    byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
+                    await _messageDelivery.SendToUserAsync(userId, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+                    await _fileMetadataRepository.UpdateDeliveredAsync(metadata.Id, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error delivering pending file {FileId} to user {UserId}", metadata.Id, userId);
+                }
+            }
         }
 
         public async Task CancelReceivingAsync(Guid connectionId, CancellationToken cancellationToken = default)

@@ -227,6 +227,8 @@ namespace Server.Protocol
                 byte[] responseBytes = JsonSerializer.SerializeToUtf8Bytes(result.Response, JsonOptions);
                 await _writer.WritePacketAsync(MessageType.Login, responseBytes, cancellationToken).ConfigureAwait(false);
                 _onAuthenticated?.Invoke(ConnectionId, userId);
+                await _messageService.DeliverPendingForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+                await _fileTransferService.DeliverPendingFilesForUserAsync(userId, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             if (result.ErrorCode == ErrorCodes.Blocked)

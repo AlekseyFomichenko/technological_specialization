@@ -30,5 +30,22 @@ namespace Server.Data
                 .Where(f => f.ReceiverId == receiverId)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<IReadOnlyList<FileMetadata>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default)
+        {
+            return await _context.FileMetadata
+                .Where(f => f.ReceiverId == receiverId && !f.IsDelivered)
+                .OrderBy(f => f.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task UpdateDeliveredAsync(Guid fileId, CancellationToken cancellationToken = default)
+        {
+            var file = await _context.FileMetadata.FindAsync([fileId], cancellationToken);
+            if (file is null)
+                return;
+            file.IsDelivered = true;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

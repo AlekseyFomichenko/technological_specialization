@@ -54,6 +54,7 @@ namespace Client.Services
                 if (loginResponse is not null && !string.IsNullOrEmpty(loginResponse.Token))
                 {
                     _sessionContext.Token = loginResponse.Token;
+                    _sessionContext.UserId = loginResponse.UserId;
                     return LoginResult.Ok();
                 }
                 return LoginResult.Fail("InvalidResponse", "Login response missing token.");

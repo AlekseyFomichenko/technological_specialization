@@ -104,7 +104,7 @@ namespace Server.Services
                 ExpiresAt = DateTime.UtcNow.AddHours(SessionLifetimeHours)
             };
             await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
-            return LoginResult.Ok(new LoginResponse { Token = session.Token }, user.Id);
+            return LoginResult.Ok(new LoginResponse { Token = session.Token, UserId = user.Id }, user.Id);
         }
     }
 }

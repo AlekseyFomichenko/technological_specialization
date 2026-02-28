@@ -70,5 +70,27 @@ namespace Server.Services
 
             return SendMessageResult.Ok(message.Id);
         }
+
+        public async Task DeliverPendingForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<Message> pending = await _messageRepository.GetUndeliveredForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+            foreach (Message message in pending)
+            {
+                var incomingPayload = new IncomingTextPayload
+                {
+                    SenderId = message.SenderId,
+                    Content = message.Content,
+                    MessageId = message.Id
+                };
+                byte[] incomingBytes = JsonSerializer.SerializeToUtf8Bytes(incomingPayload, JsonOptions);
+                bool delivered = await _messageDelivery.SendToUserAsync(
+                    userId,
+                    MessageType.TextMessage,
+                    incomingBytes.AsMemory(),
+                    cancellationToken).ConfigureAwait(false);
+                if (delivered)
+                    await _messageRepository.UpdateDeliveredAsync(message.Id, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 }
