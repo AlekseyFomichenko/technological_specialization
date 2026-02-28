@@ -24,17 +24,17 @@ namespace Server.Data
             return await _context.FileMetadata.FindAsync([id], cancellationToken);
         }
 
-        public async Task<IReadOnlyList<FileMetadata>> GetByReceiverIdAsync(Guid receiverId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<FileMetadata>> GetByReceiverLoginAsync(string receiverLogin, CancellationToken cancellationToken = default)
         {
             return await _context.FileMetadata
-                .Where(f => f.ReceiverId == receiverId)
+                .Where(f => f.ReceiverLogin == receiverLogin)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IReadOnlyList<FileMetadata>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<FileMetadata>> GetUndeliveredForUserAsync(string receiverLogin, CancellationToken cancellationToken = default)
         {
             return await _context.FileMetadata
-                .Where(f => f.ReceiverId == receiverId && !f.IsDelivered)
+                .Where(f => f.ReceiverLogin == receiverLogin && !f.IsDelivered)
                 .OrderBy(f => f.CreatedAt)
                 .ToListAsync(cancellationToken);
         }

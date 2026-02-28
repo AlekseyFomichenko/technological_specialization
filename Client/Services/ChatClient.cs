@@ -26,13 +26,13 @@ namespace Client.Services
             TextMessageReceived?.Invoke(this, payload);
         }
 
-        public async Task<SendMessageResult> SendMessageAsync(Guid receiverId, string content, CancellationToken cancellationToken = default)
+        public async Task<SendMessageResult> SendMessageAsync(string receiverLogin, string content, CancellationToken cancellationToken = default)
         {
             var token = _sessionContext.Token;
             if (string.IsNullOrEmpty(token))
                 return SendMessageResult.Fail("NotAuthenticated", "Not logged in.");
 
-            var payloadDto = new TextMessagePayload { Token = token, ReceiverId = receiverId, Content = content };
+            var payloadDto = new TextMessagePayload { Token = token, ReceiverLogin = receiverLogin, Content = content };
             var payload = JsonSerializer.SerializeToUtf8Bytes(payloadDto, ClientProtocolConstants.JsonOptions);
             _pending.SetPending();
             await _writer.WritePacketAsync(MessageType.TextMessage, payload, cancellationToken).ConfigureAwait(false);

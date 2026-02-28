@@ -6,6 +6,9 @@ namespace Client.UI
 {
     public sealed class ChatScreen
     {
+        private const int MinReceiverLoginLength = 3;
+        private const int MaxReceiverLoginLength = 100;
+
         private readonly AppSession _session;
         private readonly ConcurrentQueue<string> _incomingQueue = new();
         private readonly SemaphoreSlim _incomingSignal = new(0);
@@ -23,8 +26,8 @@ namespace Client.UI
 
             try
             {
-                Guid? currentReceiverId = PromptReceiverId(cancellationToken);
-                if (!currentReceiverId.HasValue)
+                string? currentReceiverLogin = PromptReceiverLogin(cancellationToken);
+                if (currentReceiverLogin is null)
                     return;
 
                 PrintHelp();
@@ -46,15 +49,15 @@ namespace Client.UI
                         continue;
                     if (trimmed.StartsWith("/", StringComparison.Ordinal))
                     {
-                        var (exit, newReceiverId) = await HandleCommandAsync(trimmed, currentReceiverId, cancellationToken).ConfigureAwait(false);
-                        if (newReceiverId.HasValue)
-                            currentReceiverId = newReceiverId;
+                        var (exit, newReceiverLogin) = await HandleCommandAsync(trimmed, currentReceiverLogin, cancellationToken).ConfigureAwait(false);
+                        if (newReceiverLogin is not null)
+                            currentReceiverLogin = newReceiverLogin;
                         if (exit)
                             break;
                     }
                     else
                     {
-                        await SendMessageToCurrentAsync(currentReceiverId.Value, trimmed, cancellationToken).ConfigureAwait(false);
+                        await SendMessageToCurrentAsync(currentReceiverLogin, trimmed, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -71,13 +74,13 @@ namespace Client.UI
 
         private void OnTextMessageReceived(object? sender, IncomingTextPayload payload)
         {
-            _incomingQueue.Enqueue($"[{payload.SenderId}]: {payload.Content}");
+            _incomingQueue.Enqueue($"[{payload.SenderLogin}]: {payload.Content}");
             _incomingSignal.Release();
         }
 
-        private void OnFileReceiveStarted(object? sender, (string FileName, Guid SenderId) e)
+        private void OnFileReceiveStarted(object? sender, (string FileName, string SenderLogin) e)
         {
-            _incomingQueue.Enqueue($"[file] {e.FileName} (from {e.SenderId})");
+            _incomingQueue.Enqueue($"[file] {e.FileName} (from {e.SenderLogin})");
             _incomingSignal.Release();
         }
 
@@ -145,22 +148,41 @@ namespace Client.UI
             return null;
         }
 
-        private static Guid? PromptReceiverId(CancellationToken cancellationToken)
+        private static string? PromptReceiverLogin(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                Console.Write("Enter receiver Guid: ");
+                Console.Write("Enter receiver login: ");
                 var line = Console.ReadLine()?.Trim() ?? "";
                 if (string.IsNullOrEmpty(line))
                     continue;
-                if (Guid.TryParse(line, out var id))
-                    return id;
-                WriteError("Invalid Guid format.");
+                if (!TryValidateReceiverLogin(line, out var error))
+                {
+                    WriteError(error ?? "Invalid receiver login.");
+                    continue;
+                }
+                return line;
             }
             return null;
         }
 
-        private async Task<(bool ExitRequested, Guid? NewReceiverId)> HandleCommandAsync(string line, Guid? currentReceiverId, CancellationToken cancellationToken)
+        private static bool TryValidateReceiverLogin(string login, out string? error)
+        {
+            if (login.Length < MinReceiverLoginLength || login.Length > MaxReceiverLoginLength)
+            {
+                error = $"Receiver login must be between {MinReceiverLoginLength} and {MaxReceiverLoginLength} characters.";
+                return false;
+            }
+            if (login.Contains(' '))
+            {
+                error = "Receiver login must not contain spaces.";
+                return false;
+            }
+            error = null;
+            return true;
+        }
+
+        private async Task<(bool ExitRequested, string? NewReceiverLogin)> HandleCommandAsync(string line, string? currentReceiverLogin, CancellationToken cancellationToken)
         {
             var parts = line.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var cmd = parts[0].ToLowerInvariant();
@@ -170,9 +192,9 @@ namespace Client.UI
                 return (true, null);
             if (cmd == "/me")
             {
-                var userId = _session.SessionContext.UserId;
-                if (userId.HasValue)
-                    WriteSystem($"Your Id: {userId.Value}");
+                var login = _session.SessionContext.Login;
+                if (login is not null)
+                    WriteSystem($"Your login: {login}");
                 else
                     WriteError("Not logged in.");
                 return (false, null);
@@ -184,19 +206,24 @@ namespace Client.UI
             }
             if (cmd == "/to")
             {
-                if (string.IsNullOrEmpty(arg) || !Guid.TryParse(arg, out var id))
+                if (string.IsNullOrEmpty(arg))
                 {
-                    WriteError("Usage: /to <receiverId>");
+                    WriteError("Usage: /to <receiverLogin>");
                     return (false, null);
                 }
-                WriteSystem($"Receiver set to {id}.");
-                return (false, id);
+                if (!TryValidateReceiverLogin(arg, out var error))
+                {
+                    WriteError(error ?? "Invalid receiver login.");
+                    return (false, null);
+                }
+                WriteSystem($"Receiver set to {arg}.");
+                return (false, arg);
             }
             if (cmd == "/file")
             {
-                if (!currentReceiverId.HasValue)
+                if (currentReceiverLogin is null)
                 {
-                    WriteError("Set receiver first with /to <receiverId>.");
+                    WriteError("Set receiver first with /to <receiverLogin>.");
                     return (false, null);
                 }
                 var path = ParsePath(arg);
@@ -205,7 +232,7 @@ namespace Client.UI
                     WriteError("Usage: /file <path> (path may be in quotes)");
                     return (false, null);
                 }
-                var result = await _session.FileClient.SendFileAsync(path, currentReceiverId.Value, cancellationToken).ConfigureAwait(false);
+                var result = await _session.FileClient.SendFileAsync(path, currentReceiverLogin, cancellationToken).ConfigureAwait(false);
                 if (result.Success)
                     WriteSystem("File sent.");
                 else
@@ -226,9 +253,9 @@ namespace Client.UI
             return t;
         }
 
-        private async Task SendMessageToCurrentAsync(Guid receiverId, string content, CancellationToken cancellationToken)
+        private async Task SendMessageToCurrentAsync(string receiverLogin, string content, CancellationToken cancellationToken)
         {
-            var result = await _session.ChatClient.SendMessageAsync(receiverId, content, cancellationToken).ConfigureAwait(false);
+            var result = await _session.ChatClient.SendMessageAsync(receiverLogin, content, cancellationToken).ConfigureAwait(false);
             if (result.Success)
                 WriteSystem("Sent.");
             else
@@ -237,7 +264,7 @@ namespace Client.UI
 
         private static void PrintHelp()
         {
-            WriteSystem("Commands: /to <receiverId>  /file <path>  /me  /exit  /help");
+            WriteSystem("Commands: /to <receiverLogin>  /file <path>  /me  /exit  /help");
             WriteSystem("Example: /file \"C:\\My folder\\doc.pdf\"");
         }
 

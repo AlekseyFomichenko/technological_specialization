@@ -29,10 +29,10 @@ namespace Server.Data
             }
         }
 
-        public async Task<IReadOnlyList<Message>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<Message>> GetUndeliveredForUserAsync(string receiverLogin, CancellationToken cancellationToken = default)
         {
             return await _context.Messages
-                .Where(m => m.ReceiverId == receiverId && !m.IsDelivered)
+                .Where(m => m.ReceiverLogin == receiverLogin && !m.IsDelivered)
                 .ToListAsync(cancellationToken);
         }
     }

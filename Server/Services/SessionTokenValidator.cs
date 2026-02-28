@@ -12,12 +12,12 @@ namespace Server.Services
             _sessionRepository = sessionRepository;
         }
 
-        public async Task<Guid?> ValidateAsync(string token, CancellationToken cancellationToken = default)
+        public async Task<string?> ValidateAsync(string token, CancellationToken cancellationToken = default)
         {
             var session = await _sessionRepository.GetByTokenAsync(token, cancellationToken);
             if (session is null || session.ExpiresAt < DateTime.UtcNow)
                 return null;
-            return session.UserId;
+            return session.UserLogin;
         }
     }
 }

@@ -6,8 +6,8 @@ namespace Server.Data.Abstracts
     {
         Task AddAsync(FileMetadata fileMetadata, CancellationToken cancellationToken = default);
         Task<FileMetadata?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-        Task<IReadOnlyList<FileMetadata>> GetByReceiverIdAsync(Guid receiverId, CancellationToken cancellationToken = default);
-        Task<IReadOnlyList<FileMetadata>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<FileMetadata>> GetByReceiverLoginAsync(string receiverLogin, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<FileMetadata>> GetUndeliveredForUserAsync(string receiverLogin, CancellationToken cancellationToken = default);
         Task UpdateDeliveredAsync(Guid fileId, CancellationToken cancellationToken = default);
     }
 }

@@ -28,17 +28,17 @@ namespace Server.Services
             _logger = logger;
         }
 
-        public async Task<SendMessageResult> SendMessageAsync(Guid senderId, TextMessagePayload payload, CancellationToken cancellationToken = default)
+        public async Task<SendMessageResult> SendMessageAsync(string senderLogin, TextMessagePayload payload, CancellationToken cancellationToken = default)
         {
-            User? receiver = await _userRepository.GetByIdAsync(payload.ReceiverId, cancellationToken).ConfigureAwait(false);
+            User? receiver = await _userRepository.GetByLoginAsync(payload.ReceiverLogin, cancellationToken).ConfigureAwait(false);
             if (receiver is null)
                 return SendMessageResult.Fail(ErrorCodes.ReceiverNotFound, "Receiver not found.");
 
             var message = new Message
             {
                 Id = Guid.NewGuid(),
-                SenderId = senderId,
-                ReceiverId = payload.ReceiverId,
+                SenderLogin = senderLogin,
+                ReceiverLogin = payload.ReceiverLogin,
                 Content = payload.Content,
                 CreatedAt = DateTime.UtcNow,
                 IsDelivered = false
@@ -47,13 +47,13 @@ namespace Server.Services
 
             var incomingPayload = new IncomingTextPayload
             {
-                SenderId = message.SenderId,
+                SenderLogin = message.SenderLogin,
                 Content = message.Content,
                 MessageId = message.Id
             };
             byte[] incomingBytes = JsonSerializer.SerializeToUtf8Bytes(incomingPayload, JsonOptions);
             bool delivered = await _messageDelivery.SendToUserAsync(
-                payload.ReceiverId,
+                payload.ReceiverLogin,
                 MessageType.TextMessage,
                 incomingBytes.AsMemory(),
                 cancellationToken).ConfigureAwait(false);
@@ -63,7 +63,7 @@ namespace Server.Services
             var ackPayload = new AckPayload { Success = true, Id = message.Id };
             byte[] ackBytes = JsonSerializer.SerializeToUtf8Bytes(ackPayload, JsonOptions);
             await _messageDelivery.SendToUserAsync(
-                senderId,
+                senderLogin,
                 MessageType.Ack,
                 ackBytes.AsMemory(),
                 cancellationToken).ConfigureAwait(false);
@@ -71,20 +71,20 @@ namespace Server.Services
             return SendMessageResult.Ok(message.Id);
         }
 
-        public async Task DeliverPendingForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task DeliverPendingForUserAsync(string login, CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<Message> pending = await _messageRepository.GetUndeliveredForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<Message> pending = await _messageRepository.GetUndeliveredForUserAsync(login, cancellationToken).ConfigureAwait(false);
             foreach (Message message in pending)
             {
                 var incomingPayload = new IncomingTextPayload
                 {
-                    SenderId = message.SenderId,
+                    SenderLogin = message.SenderLogin,
                     Content = message.Content,
                     MessageId = message.Id
                 };
                 byte[] incomingBytes = JsonSerializer.SerializeToUtf8Bytes(incomingPayload, JsonOptions);
                 bool delivered = await _messageDelivery.SendToUserAsync(
-                    userId,
+                    login,
                     MessageType.TextMessage,
                     incomingBytes.AsMemory(),
                     cancellationToken).ConfigureAwait(false);

@@ -13,8 +13,8 @@ namespace Server.Services
         private readonly IConnectionAcceptPolicy _policy;
         private readonly ILogger<ClientConnectionManager> _logger;
         private readonly ConcurrentDictionary<Guid, (TcpClient Client, ClientSession Session, IServiceScope Scope, IPAddress RemoteIp)> _byConnectionId = new();
-        private readonly ConcurrentDictionary<Guid, ClientSession> _byUserId = new();
-        private readonly ConcurrentDictionary<Guid, Guid> _userIdByConnectionId = new();
+        private readonly ConcurrentDictionary<string, ClientSession> _byLogin = new();
+        private readonly ConcurrentDictionary<Guid, string> _loginByConnectionId = new();
 
         public ClientConnectionManager(
             IServiceScopeFactory scopeFactory,
@@ -76,24 +76,24 @@ namespace Server.Services
         {
             if (!_byConnectionId.TryRemove(connectionId, out var entry))
                 return;
-            if (_userIdByConnectionId.TryRemove(connectionId, out Guid userId))
-                _byUserId.TryRemove(userId, out _);
+            if (_loginByConnectionId.TryRemove(connectionId, out string? login))
+                _byLogin.TryRemove(login, out _);
             try { entry.Scope.Dispose(); } catch (Exception ex) { _logger.LogDebug(ex, "Scope dispose failed for {ConnectionId}", connectionId); }
             try { entry.Client.Dispose(); } catch (Exception ex) { _logger.LogDebug(ex, "Client dispose failed for {ConnectionId}", connectionId); }
         }
 
-        private void OnAuthenticated(Guid connectionId, Guid userId)
+        private void OnAuthenticated(Guid connectionId, string login)
         {
             if (_byConnectionId.TryGetValue(connectionId, out var entry))
             {
-                _byUserId[userId] = entry.Session;
-                _userIdByConnectionId[connectionId] = userId;
+                _byLogin[login] = entry.Session;
+                _loginByConnectionId[connectionId] = login;
             }
         }
 
-        public async Task<bool> SendToUserAsync(Guid userId, MessageType messageType, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
+        public async Task<bool> SendToUserAsync(string login, MessageType messageType, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
         {
-            if (_byUserId.TryGetValue(userId, out ClientSession? session))
+            if (_byLogin.TryGetValue(login, out ClientSession? session))
                 return await session.TrySendAsync(messageType, payload, cancellationToken).ConfigureAwait(false);
             return false;
         }

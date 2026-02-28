@@ -19,9 +19,9 @@ namespace Client.Services
         private long _receiveWritten;
         private string? _receiveFilePath;
         private string? _receiveFileName;
-        private Guid _receiveSenderId;
+        private string? _receiveSenderLogin;
 
-        public event EventHandler<(string FileName, Guid SenderId)>? FileReceiveStarted;
+        public event EventHandler<(string FileName, string SenderLogin)>? FileReceiveStarted;
         public event EventHandler<(string FileName, string SavedPath)>? FileReceiveCompleted;
 
         public FileClient(PacketWriter writer, ClientOptions options, PendingResponse pending, SessionContext sessionContext)
@@ -32,7 +32,7 @@ namespace Client.Services
             _sessionContext = sessionContext ?? throw new ArgumentNullException(nameof(sessionContext));
         }
 
-        public async Task<SendFileResult> SendFileAsync(string filePath, Guid receiverId, CancellationToken cancellationToken = default)
+        public async Task<SendFileResult> SendFileAsync(string filePath, string receiverLogin, CancellationToken cancellationToken = default)
         {
             var token = _sessionContext.Token;
             if (string.IsNullOrEmpty(token))
@@ -48,7 +48,7 @@ namespace Client.Services
             var startPayload = new FileStartPayload
             {
                 Token = token,
-                ReceiverId = receiverId,
+                ReceiverLogin = receiverLogin,
                 FileName = fileName,
                 FileSize = fileInfo.Length
             };
@@ -93,12 +93,12 @@ namespace Client.Services
                 var path = Path.Combine(dir, safeName);
                 _receiveFilePath = path;
                 _receiveFileName = safeName;
-                _receiveSenderId = payload.SenderId;
+                _receiveSenderLogin = payload.SenderLogin;
                 _receiveStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
                 _receiveTotal = payload.FileSize;
                 _receiveWritten = 0;
             }
-            FileReceiveStarted?.Invoke(this, (payload.FileName, payload.SenderId));
+            FileReceiveStarted?.Invoke(this, (payload.FileName, payload.SenderLogin));
         }
 
         public void ReceiveChunk(byte[] payload)

@@ -31,7 +31,7 @@ namespace Server.Services
             Stream stream,
             IPAddress? clientIp,
             Action<Guid> onTerminated,
-            Action<Guid, Guid> onAuthenticated)
+            Action<Guid, string> onAuthenticated)
         {
             return new ClientSession(
                 stream,

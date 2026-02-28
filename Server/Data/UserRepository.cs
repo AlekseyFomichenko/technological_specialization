@@ -18,11 +18,6 @@ namespace Server.Data
             return await _context.Users.FirstOrDefaultAsync(u => u.Login == login, cancellationToken);
         }
 
-        public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users.FindAsync([id], cancellationToken);
-        }
-
         public async Task AddAsync(User user, CancellationToken cancellationToken = default)
         {
             await _context.Users.AddAsync(user, cancellationToken);

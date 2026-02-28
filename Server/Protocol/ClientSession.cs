@@ -28,12 +28,12 @@ namespace Server.Protocol
         private readonly IFileTransferService _fileTransferService;
         private readonly ILogger<ClientSession> _logger;
         private readonly Action<Guid> _onTerminated;
-        private readonly Action<Guid, Guid>? _onAuthenticated;
+        private readonly Action<Guid, string>? _onAuthenticated;
         private readonly int _inactivityTimeoutMinutes;
         private readonly SemaphoreSlim _writeLock = new(1, 1);
 
         private ClientSessionState _state;
-        private Guid? _userId;
+        private string? _login;
         private string? _token;
         private int _invalidPacketCount;
 
@@ -43,7 +43,7 @@ namespace Server.Protocol
             Stream stream,
             IPAddress? clientIp,
             Action<Guid> onTerminated,
-            Action<Guid, Guid>? onAuthenticated,
+            Action<Guid, string>? onAuthenticated,
             IAuthService authService,
             IMessageService messageService,
             IFileTransferService fileTransferService,
@@ -219,16 +219,16 @@ namespace Server.Protocol
             }
 
             LoginResult result = await _authService.LoginAsync(request, _clientIp, cancellationToken).ConfigureAwait(false);
-            if (result.Success && result.Response is not null && result.UserId is { } userId)
+            if (result.Success && result.Response is not null && result.Login is { } login)
             {
                 _token = result.Response.Token;
-                _userId = userId;
+                _login = login;
                 _state = ClientSessionState.Authenticated;
                 byte[] responseBytes = JsonSerializer.SerializeToUtf8Bytes(result.Response, JsonOptions);
                 await _writer.WritePacketAsync(MessageType.Login, responseBytes, cancellationToken).ConfigureAwait(false);
-                _onAuthenticated?.Invoke(ConnectionId, userId);
-                await _messageService.DeliverPendingForUserAsync(userId, cancellationToken).ConfigureAwait(false);
-                await _fileTransferService.DeliverPendingFilesForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+                _onAuthenticated?.Invoke(ConnectionId, login);
+                await _messageService.DeliverPendingForUserAsync(login, cancellationToken).ConfigureAwait(false);
+                await _fileTransferService.DeliverPendingFilesForUserAsync(login, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             if (result.ErrorCode == ErrorCodes.Blocked)
@@ -243,7 +243,7 @@ namespace Server.Protocol
 
         private async Task<bool> HandleTextMessageAsync(byte[] payload, CancellationToken cancellationToken)
         {
-            if (_userId is not { } senderId)
+            if (_login is not { } senderLogin)
                 return false;
             TextMessagePayload? messagePayload;
             try
@@ -261,7 +261,7 @@ namespace Server.Protocol
                 return true;
             }
 
-            SendMessageResult result = await _messageService.SendMessageAsync(senderId, messagePayload, cancellationToken).ConfigureAwait(false);
+            SendMessageResult result = await _messageService.SendMessageAsync(senderLogin, messagePayload, cancellationToken).ConfigureAwait(false);
             if (result.Success)
                 return true;
             await SendErrorAsync(result.ErrorCode ?? "ERROR", result.ErrorMessage ?? "Send failed.").ConfigureAwait(false);
@@ -270,7 +270,7 @@ namespace Server.Protocol
 
         private async Task<bool> HandleFileStartAsync(byte[] payload, CancellationToken cancellationToken)
         {
-            if (_userId is not { } senderId)
+            if (_login is not { } senderLogin)
                 return false;
             FileStartPayload? filePayload;
             try
@@ -288,7 +288,7 @@ namespace Server.Protocol
                 return true;
             }
 
-            StartFileResult result = await _fileTransferService.StartReceivingAsync(ConnectionId, senderId, filePayload, cancellationToken).ConfigureAwait(false);
+            StartFileResult result = await _fileTransferService.StartReceivingAsync(ConnectionId, senderLogin, filePayload, cancellationToken).ConfigureAwait(false);
             if (result.Success)
             {
                 _state = ClientSessionState.ReceivingFile;

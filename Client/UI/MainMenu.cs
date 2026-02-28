@@ -123,9 +123,9 @@ namespace Client.UI
                 if (result.Success)
                 {
                     WriteSystem("Logged in.");
-                    var userId = _session.SessionContext.UserId;
-                    if (userId.HasValue)
-                        WriteSystem($"Your Id: {userId.Value}");
+                    var loginName = _session.SessionContext.Login;
+                    if (loginName is not null)
+                        WriteSystem($"Your login: {loginName}");
                     return true;
                 }
                 WriteError($"{result.ErrorCode}: {result.ErrorMessage}");

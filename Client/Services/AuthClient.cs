@@ -51,13 +51,13 @@ namespace Client.Services
             if (type == MessageType.Login)
             {
                 var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responsePayload, ClientProtocolConstants.JsonOptions);
-                if (loginResponse is not null && !string.IsNullOrEmpty(loginResponse.Token))
+                if (loginResponse is not null && !string.IsNullOrEmpty(loginResponse.Token) && !string.IsNullOrEmpty(loginResponse.Login))
                 {
                     _sessionContext.Token = loginResponse.Token;
-                    _sessionContext.UserId = loginResponse.UserId;
+                    _sessionContext.Login = loginResponse.Login;
                     return LoginResult.Ok();
                 }
-                return LoginResult.Fail("InvalidResponse", "Login response missing token.");
+                return LoginResult.Fail("InvalidResponse", "Login response missing token or login.");
             }
             return LoginResult.Fail("UnexpectedResponse", $"Unexpected message type: {type}");
         }

@@ -37,7 +37,7 @@ namespace Server.Services
             _logger = logger;
         }
 
-        public async Task<StartFileResult> StartReceivingAsync(Guid connectionId, Guid senderId, FileStartPayload payload, CancellationToken cancellationToken = default)
+        public async Task<StartFileResult> StartReceivingAsync(Guid connectionId, string senderLogin, FileStartPayload payload, CancellationToken cancellationToken = default)
         {
             long maxBytes = _options.MaxFileSizeMb * 1024L * 1024;
             if (payload.FileSize > maxBytes)
@@ -47,7 +47,7 @@ namespace Server.Services
             if (string.IsNullOrEmpty(extension) || !Array.Exists(_options.AllowedExtensions ?? Array.Empty<string>(), e => string.Equals(e, extension, StringComparison.OrdinalIgnoreCase)))
                 return StartFileResult.Fail(ErrorCodes.ExtensionNotAllowed, "File extension not allowed.");
 
-            User? receiver = await _userRepository.GetByIdAsync(payload.ReceiverId, cancellationToken).ConfigureAwait(false);
+            User? receiver = await _userRepository.GetByLoginAsync(payload.ReceiverLogin, cancellationToken).ConfigureAwait(false);
             if (receiver is null)
                 return StartFileResult.Fail(ErrorCodes.ReceiverNotFound, "Receiver not found.");
 
@@ -57,8 +57,8 @@ namespace Server.Services
             {
                 Stream = writeStream,
                 RelativePath = relativePath,
-                SenderId = senderId,
-                ReceiverId = payload.ReceiverId,
+                SenderLogin = senderLogin,
+                ReceiverLogin = payload.ReceiverLogin,
                 FileName = payload.FileName,
                 ExpectedFileSize = payload.FileSize,
                 ReceivedBytes = 0
@@ -103,8 +103,8 @@ namespace Server.Services
             var metadata = new FileMetadata
             {
                 Id = fileId,
-                SenderId = receive.SenderId,
-                ReceiverId = receive.ReceiverId,
+                SenderLogin = receive.SenderLogin,
+                ReceiverLogin = receive.ReceiverLogin,
                 FileName = receive.FileName,
                 FilePath = receive.RelativePath,
                 FileSize = receive.ReceivedBytes,
@@ -115,12 +115,12 @@ namespace Server.Services
             var notification = new FileAvailablePayload
             {
                 FileId = fileId,
-                SenderId = receive.SenderId,
+                SenderLogin = receive.SenderLogin,
                 FileName = receive.FileName,
                 FileSize = receive.ReceivedBytes
             };
             byte[] notificationBytes = JsonSerializer.SerializeToUtf8Bytes(notification, JsonOptions);
-            await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileStart, notificationBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+            await _messageDelivery.SendToUserAsync(receive.ReceiverLogin, MessageType.FileStart, notificationBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
 
             const int chunkSize = 65536;
             await using (Stream readStream = await _fileStorage.OpenReadAsync(receive.RelativePath, cancellationToken).ConfigureAwait(false))
@@ -129,36 +129,36 @@ namespace Server.Services
                 int read;
                 while ((read = await readStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
                 {
-                    await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    await _messageDelivery.SendToUserAsync(receive.ReceiverLogin, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                 }
             }
 
             var fileEndPayload = new FileEndPayload();
             byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
-            await _messageDelivery.SendToUserAsync(receive.ReceiverId, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+            await _messageDelivery.SendToUserAsync(receive.ReceiverLogin, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
 
             var ackPayload = new AckPayload { Success = true, Id = fileId };
             byte[] ackBytes = JsonSerializer.SerializeToUtf8Bytes(ackPayload, JsonOptions);
-            await _messageDelivery.SendToUserAsync(receive.SenderId, MessageType.Ack, ackBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+            await _messageDelivery.SendToUserAsync(receive.SenderLogin, MessageType.Ack, ackBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
 
             return EndFileResult.Ok(fileId);
         }
 
-        public async Task DeliverPendingFilesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task DeliverPendingFilesForUserAsync(string login, CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<FileMetadata> undelivered = await _fileMetadataRepository.GetUndeliveredForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<FileMetadata> undelivered = await _fileMetadataRepository.GetUndeliveredForUserAsync(login, cancellationToken).ConfigureAwait(false);
             const int chunkSize = 65536;
             foreach (FileMetadata metadata in undelivered)
             {
                 var fileStartPayload = new FileAvailablePayload
                 {
                     FileId = metadata.Id,
-                    SenderId = metadata.SenderId,
+                    SenderLogin = metadata.SenderLogin,
                     FileName = metadata.FileName,
                     FileSize = metadata.FileSize
                 };
                 byte[] fileStartBytes = JsonSerializer.SerializeToUtf8Bytes(fileStartPayload, JsonOptions);
-                bool delivered = await _messageDelivery.SendToUserAsync(userId, MessageType.FileStart, fileStartBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+                bool delivered = await _messageDelivery.SendToUserAsync(login, MessageType.FileStart, fileStartBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
                 if (!delivered)
                     continue;
                 try
@@ -169,17 +169,17 @@ namespace Server.Services
                         int read;
                         while ((read = await readStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
                         {
-                            await _messageDelivery.SendToUserAsync(userId, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                            await _messageDelivery.SendToUserAsync(login, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                         }
                     }
                     var fileEndPayload = new FileEndPayload();
                     byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
-                    await _messageDelivery.SendToUserAsync(userId, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+                    await _messageDelivery.SendToUserAsync(login, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
                     await _fileMetadataRepository.UpdateDeliveredAsync(metadata.Id, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error delivering pending file {FileId} to user {UserId}", metadata.Id, userId);
+                    _logger.LogWarning(ex, "Error delivering pending file {FileId} to user {Login}", metadata.Id, login);
                 }
             }
         }
@@ -207,8 +207,8 @@ namespace Server.Services
         {
             public required Stream Stream { get; init; }
             public required string RelativePath { get; init; }
-            public required Guid SenderId { get; init; }
-            public required Guid ReceiverId { get; init; }
+            public required string SenderLogin { get; init; }
+            public required string ReceiverLogin { get; init; }
             public required string FileName { get; init; }
             public required long ExpectedFileSize { get; init; }
             public long ReceivedBytes { get; set; }

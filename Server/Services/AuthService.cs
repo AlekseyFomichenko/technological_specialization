@@ -59,7 +59,6 @@ namespace Server.Services
             string hash = _passwordHasher.Hash(request.Password);
             var user = new User
             {
-                Id = Guid.NewGuid(),
                 Login = request.Login.Trim(),
                 PasswordHash = hash,
                 CreatedAt = DateTime.UtcNow
@@ -99,12 +98,12 @@ namespace Server.Services
             var session = new Session
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
+                UserLogin = user.Login,
                 Token = _tokenGenerator.Generate(),
                 ExpiresAt = DateTime.UtcNow.AddHours(SessionLifetimeHours)
             };
             await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
-            return LoginResult.Ok(new LoginResponse { Token = session.Token, UserId = user.Id }, user.Id);
+            return LoginResult.Ok(new LoginResponse { Token = session.Token, Login = user.Login }, user.Login);
         }
     }
 }

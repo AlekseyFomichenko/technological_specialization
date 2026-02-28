@@ -47,17 +47,21 @@ namespace Server.Migrations
                     b.Property<bool>("IsDelivered")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("ReceiverId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ReceiverLogin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<Guid>("SenderId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("SenderLogin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ReceiverId");
+                    b.HasIndex("ReceiverLogin");
 
-                    b.HasIndex("SenderId");
+                    b.HasIndex("SenderLogin");
 
                     b.ToTable("files", (string)null);
                 });
@@ -79,19 +83,23 @@ namespace Server.Migrations
                     b.Property<bool>("IsDelivered")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("ReceiverId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ReceiverLogin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<Guid>("SenderId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("SenderLogin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
 
-                    b.HasIndex("ReceiverId");
+                    b.HasIndex("ReceiverLogin");
 
-                    b.HasIndex("SenderId");
+                    b.HasIndex("SenderLogin");
 
                     b.ToTable("messages", (string)null);
                 });
@@ -110,41 +118,35 @@ namespace Server.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserLogin")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Token");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserLogin");
 
                     b.ToTable("sessions", (string)null);
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Login")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Login")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("Login")
-                        .IsUnique();
+                    b.HasKey("Login");
 
                     b.ToTable("users", (string)null);
                 });
@@ -153,13 +155,13 @@ namespace Server.Migrations
                 {
                     b.HasOne("Server.Models.User", null)
                         .WithMany()
-                        .HasForeignKey("ReceiverId")
+                        .HasForeignKey("ReceiverLogin")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Server.Models.User", null)
                         .WithMany()
-                        .HasForeignKey("SenderId")
+                        .HasForeignKey("SenderLogin")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -168,13 +170,13 @@ namespace Server.Migrations
                 {
                     b.HasOne("Server.Models.User", null)
                         .WithMany()
-                        .HasForeignKey("ReceiverId")
+                        .HasForeignKey("ReceiverLogin")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Server.Models.User", null)
                         .WithMany()
-                        .HasForeignKey("SenderId")
+                        .HasForeignKey("SenderLogin")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -183,7 +185,7 @@ namespace Server.Migrations
                 {
                     b.HasOne("Server.Models.User", null)
                         .WithMany()
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("UserLogin")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

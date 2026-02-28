@@ -4,6 +4,6 @@ namespace Server.Services.Abstracts
 {
     internal interface IMessageDelivery
     {
-        Task<bool> SendToUserAsync(Guid userId, MessageType messageType, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default);
+        Task<bool> SendToUserAsync(string login, MessageType messageType, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default);
     }
 }

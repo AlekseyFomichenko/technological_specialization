@@ -20,8 +20,7 @@ namespace Server.Data
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("users");
-                entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.Login).IsUnique();
+                entity.HasKey(e => e.Login);
                 entity.Property(e => e.Login).HasMaxLength(100);
                 entity.Property(e => e.PasswordHash).HasMaxLength(256);
             });
@@ -33,8 +32,9 @@ namespace Server.Data
                 entity.HasIndex(e => e.Token);
                 entity.HasOne<User>()
                     .WithMany()
-                    .HasForeignKey(e => e.UserId)
+                    .HasForeignKey(e => e.UserLogin)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(e => e.UserLogin).HasMaxLength(100);
                 entity.Property(e => e.Token).HasMaxLength(64);
             });
 
@@ -42,16 +42,18 @@ namespace Server.Data
             {
                 entity.ToTable("messages");
                 entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.ReceiverId);
+                entity.HasIndex(e => e.ReceiverLogin);
                 entity.HasIndex(e => e.CreatedAt);
                 entity.HasOne<User>()
                     .WithMany()
-                    .HasForeignKey(e => e.SenderId)
+                    .HasForeignKey(e => e.SenderLogin)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<User>()
                     .WithMany()
-                    .HasForeignKey(e => e.ReceiverId)
+                    .HasForeignKey(e => e.ReceiverLogin)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(e => e.SenderLogin).HasMaxLength(100);
+                entity.Property(e => e.ReceiverLogin).HasMaxLength(100);
                 entity.Property(e => e.Content).HasMaxLength(10000);
             });
 
@@ -61,12 +63,14 @@ namespace Server.Data
                 entity.HasKey(e => e.Id);
                 entity.HasOne<User>()
                     .WithMany()
-                    .HasForeignKey(e => e.SenderId)
+                    .HasForeignKey(e => e.SenderLogin)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<User>()
                     .WithMany()
-                    .HasForeignKey(e => e.ReceiverId)
+                    .HasForeignKey(e => e.ReceiverLogin)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(e => e.SenderLogin).HasMaxLength(100);
+                entity.Property(e => e.ReceiverLogin).HasMaxLength(100);
                 entity.Property(e => e.FileName).HasMaxLength(255);
                 entity.Property(e => e.FilePath).HasMaxLength(1024);
             });

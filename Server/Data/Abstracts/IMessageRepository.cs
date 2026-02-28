@@ -6,6 +6,6 @@ namespace Server.Data.Abstracts
     {
         Task AddAsync(Message message, CancellationToken cancellationToken = default);
         Task UpdateDeliveredAsync(Guid messageId, CancellationToken cancellationToken = default);
-        Task<IReadOnlyList<Message>> GetUndeliveredForUserAsync(Guid receiverId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<Message>> GetUndeliveredForUserAsync(string receiverLogin, CancellationToken cancellationToken = default);
     }
 }

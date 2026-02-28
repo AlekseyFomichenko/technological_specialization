@@ -9,6 +9,6 @@ namespace Server.Services.Abstracts
             Stream stream,
             IPAddress? clientIp,
             Action<Guid> onTerminated,
-            Action<Guid, Guid> onAuthenticated);
+            Action<Guid, string> onAuthenticated);
     }
 }
