@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Options;
-using Server.Services;
+using Server.Options;
 using Server.Services.Abstracts;
 
 namespace Server
@@ -25,7 +25,8 @@ namespace Server
         protected override async Task ExecuteAsync(CancellationToken ct)
         {
             int port = _options.Value.Port;
-            var listener = new TcpListener(IPAddress.Any, port);
+            IPAddress ipAddress = IPAddress.Parse(_options.Value.IpAddress);
+            var listener = new TcpListener(ipAddress, port);
             listener.Start();
             try
             {

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Data.Abstracts;
+using Server.Options;
 using Server.Services;
 using Server.Services.Abstracts;
 
@@ -26,8 +27,6 @@ namespace Server
 
             builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
             builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
-            builder.Services.AddSingleton<ITokenGenerator, GuidTokenGenerator>();
-            builder.Services.AddScoped<ITokenValidator, SessionTokenValidator>();
             builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
             builder.Services.AddSingleton<IConnectionAcceptPolicy, ConnectionAcceptPolicy>();
             builder.Services.AddScoped<IClientSessionFactory, ClientSessionFactory>();

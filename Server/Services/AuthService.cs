@@ -11,12 +11,9 @@ namespace Server.Services
         private const int MinLoginLength = 3;
         private const int MinPasswordLength = 6;
         private const int SessionLifetimeHours = 24;
-
         private readonly IUserRepository _userRepository;
         private readonly ISessionRepository _sessionRepository;
         private readonly IPasswordHasher _passwordHasher;
-        private readonly ITokenGenerator _tokenGenerator;
-        private readonly ITokenValidator _tokenValidator;
         private readonly ILoginAttemptTracker _loginAttemptTracker;
         private readonly ILogger<AuthService> _logger;
 
@@ -24,16 +21,12 @@ namespace Server.Services
             IUserRepository userRepository,
             ISessionRepository sessionRepository,
             IPasswordHasher passwordHasher,
-            ITokenGenerator tokenGenerator,
-            ITokenValidator tokenValidator,
             ILoginAttemptTracker loginAttemptTracker,
             ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _sessionRepository = sessionRepository;
             _passwordHasher = passwordHasher;
-            _tokenGenerator = tokenGenerator;
-            _tokenValidator = tokenValidator;
             _loginAttemptTracker = loginAttemptTracker;
             _logger = logger;
         }
@@ -99,7 +92,7 @@ namespace Server.Services
             {
                 Id = Guid.NewGuid(),
                 UserLogin = user.Login,
-                Token = _tokenGenerator.Generate(),
+                Token = Guid.NewGuid().ToString("N"),
                 ExpiresAt = DateTime.UtcNow.AddHours(SessionLifetimeHours)
             };
             await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);

@@ -1,4 +1,4 @@
-namespace Server.Services
+namespace Server.Options
 {
     internal class FileStorageOptions
     {

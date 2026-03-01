@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Options;
+using Server.Options;
 using Server.Services.Abstracts;
 
 namespace Server.Services
