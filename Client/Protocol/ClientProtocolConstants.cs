@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Client.Protocol
 {
@@ -7,9 +8,7 @@ namespace Client.Protocol
         public static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
-
-        public const long MaxFileSizeBytes = 50L * 1024 * 1024;
     }
 }

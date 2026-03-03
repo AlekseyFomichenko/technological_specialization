@@ -293,6 +293,7 @@ namespace Server.Protocol
             if (result.Success)
             {
                 _state = ClientSessionState.ReceivingFile;
+                await SendFileStartAckAsync(cancellationToken).ConfigureAwait(false);
                 return true;
             }
             await SendErrorAsync(result.ErrorCode ?? "ERROR", result.ErrorMessage ?? "File start failed.").ConfigureAwait(false);
@@ -348,6 +349,11 @@ namespace Server.Protocol
             var ack = new AckPayload { Success = success, Id = id };
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(ack, JsonOptions);
             await _writer.WritePacketAsync(MessageType.Ack, bytes, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task SendFileStartAckAsync(CancellationToken cancellationToken)
+        {
+            await _writer.WritePacketAsync(MessageType.FileStartAck, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
         }
 
         private async Task TerminateAsync(CancellationToken cancellationToken)

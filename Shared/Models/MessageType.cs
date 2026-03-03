@@ -9,6 +9,7 @@ namespace Shared.Models
         FileChunk = 0x05,
         FileEnd = 0x06,
         Error = 0x07,
-        Ack = 0x08
+        Ack = 0x08,
+        FileStartAck = 0x09
     }
 }

@@ -41,8 +41,6 @@ namespace Client.Services
             var fileInfo = new FileInfo(filePath);
             if (!fileInfo.Exists)
                 return SendFileResult.Fail("NotFound", "File not found.");
-            if (fileInfo.Length > ClientProtocolConstants.MaxFileSizeBytes)
-                return SendFileResult.Fail("FileTooLarge", "File exceeds 50 MB limit.");
 
             var fileName = Path.GetFileName(filePath);
             var startPayload = new FileStartPayload
@@ -55,6 +53,10 @@ namespace Client.Services
             var startBytes = JsonSerializer.SerializeToUtf8Bytes(startPayload, ClientProtocolConstants.JsonOptions);
             _pending.SetPending();
             await _writer.WritePacketAsync(MessageType.FileStart, startBytes, cancellationToken).ConfigureAwait(false);
+
+            var result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (!result.Success)
+                return SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
 
             var chunkSize = _options.FileChunkSizeBytes;
             await using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true))
@@ -69,9 +71,10 @@ namespace Client.Services
 
             var endPayload = new FileEndPayload();
             var endBytes = JsonSerializer.SerializeToUtf8Bytes(endPayload, ClientProtocolConstants.JsonOptions);
+            _pending.SetPending();
             await _writer.WritePacketAsync(MessageType.FileEnd, endBytes, cancellationToken).ConfigureAwait(false);
 
-            var result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+            result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
             return result.Success ? SendFileResult.Ok() : SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
         }
 

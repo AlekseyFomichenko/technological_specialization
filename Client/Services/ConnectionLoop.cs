@@ -60,6 +60,9 @@ namespace Client.Services
                         case MessageType.Ack:
                             _pending.CompleteSuccess();
                             break;
+                        case MessageType.FileStartAck:
+                            _pending.CompleteSuccess();
+                            break;
                         case MessageType.Error:
                             var err = JsonSerializer.Deserialize<ErrorPayload>(payload, ClientProtocolConstants.JsonOptions);
                             _pending.CompleteError(err?.Code ?? "Error", err?.Message ?? "Unknown error");
