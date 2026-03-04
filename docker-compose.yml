@@ -1,14 +1,37 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     ports:
       - "5434:5432"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: qwerty12345
-      POSTGRES_DB: ChatApp
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  server:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};"
+      FileStorage__BasePath: "/app/files"
+      Server__IpAddress: "0.0.0.0"
+      Server__Port: "5001"
+    volumes:
+      - server_files:/app/files
+
 volumes:
   postgres_data:
+  server_files:

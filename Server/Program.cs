@@ -40,6 +40,11 @@ namespace Server
             builder.Services.AddHostedService<Worker>();
 
             var host = builder.Build();
+            using (var scope = host.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<ChatDbContext>();
+                context.Database.Migrate();
+            }
             host.Run();
         }
     }
