@@ -39,13 +39,14 @@ namespace Server.Data
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task UpdateDeliveredAsync(Guid fileId, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateDeliveredAsync(Guid fileId, CancellationToken cancellationToken = default)
         {
             var file = await _context.FileMetadata.FindAsync([fileId], cancellationToken);
             if (file is null)
-                return;
+                return false;
             file.IsDelivered = true;
             await _context.SaveChangesAsync(cancellationToken);
+            return true;
         }
     }
 }

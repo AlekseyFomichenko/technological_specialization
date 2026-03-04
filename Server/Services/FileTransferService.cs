@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic;
 using Server.Data.Abstracts;
 using Server.Models;
 using Server.Options;
@@ -93,7 +94,7 @@ namespace Server.Services
             return WriteChunkResult.Ok();
         }
 
-        public async Task<EndFileResult> EndReceivingAsync(Guid connectionId, FileEndPayload? payload, CancellationToken cancellationToken = default)
+        public async Task<EndFileResult> EndReceivingAsync(Guid connectionId, CancellationToken cancellationToken = default)
         {
             if (!_receives.TryRemove(connectionId, out ActiveReceive? receive))
                 return EndFileResult.Fail(ErrorCodes.NoActiveReceive, "No active file receive.");
@@ -134,9 +135,13 @@ namespace Server.Services
                 }
             }
 
-            var fileEndPayload = new FileEndPayload();
-            byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
-            await _messageDelivery.SendToUserAsync(receive.ReceiverLogin, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
+            var isSent = await _messageDelivery.SendToUserAsync(receive.ReceiverLogin, MessageType.FileEnd, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
+            if (isSent)
+            {
+                bool isUpdate = await _fileMetadataRepository.UpdateDeliveredAsync(fileId, cancellationToken).ConfigureAwait(false);
+                if (isUpdate)
+                    await _fileStorage.DeleteAsync(receive.RelativePath, cancellationToken).ConfigureAwait(false);
+            }
 
             var ackPayload = new AckPayload { Success = true, Id = fileId };
             byte[] ackBytes = JsonSerializer.SerializeToUtf8Bytes(ackPayload, JsonOptions);
@@ -173,10 +178,13 @@ namespace Server.Services
                             await _messageDelivery.SendToUserAsync(login, MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                         }
                     }
-                    var fileEndPayload = new FileEndPayload();
-                    byte[] fileEndBytes = JsonSerializer.SerializeToUtf8Bytes(fileEndPayload, JsonOptions);
-                    await _messageDelivery.SendToUserAsync(login, MessageType.FileEnd, fileEndBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
-                    await _fileMetadataRepository.UpdateDeliveredAsync(metadata.Id, cancellationToken).ConfigureAwait(false);
+                    var isSent = await _messageDelivery.SendToUserAsync(login, MessageType.FileEnd, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
+                    if (isSent)
+                    {
+                        bool isUpdate = await _fileMetadataRepository.UpdateDeliveredAsync(metadata.Id, cancellationToken).ConfigureAwait(false);
+                        if (isUpdate)
+                            await _fileStorage.DeleteAsync(metadata.FilePath, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex)
                 {

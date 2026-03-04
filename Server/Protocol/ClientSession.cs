@@ -165,7 +165,7 @@ namespace Server.Protocol
                     if (type == MessageType.FileChunk)
                         return await HandleFileChunkAsync(payload, cancellationToken).ConfigureAwait(false);
                     if (type == MessageType.FileEnd)
-                        return await HandleFileEndAsync(payload, cancellationToken).ConfigureAwait(false);
+                        return await HandleFileEndAsync(cancellationToken).ConfigureAwait(false);
                     await _fileTransferService.CancelReceivingAsync(ConnectionId, cancellationToken).ConfigureAwait(false);
                     return false;
                 default:
@@ -293,7 +293,7 @@ namespace Server.Protocol
             if (result.Success)
             {
                 _state = ClientSessionState.ReceivingFile;
-                await SendFileStartAckAsync(cancellationToken).ConfigureAwait(false);
+                await _writer.WritePacketAsync(MessageType.FileStartAck, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
                 return true;
             }
             await SendErrorAsync(result.ErrorCode ?? "ERROR", result.ErrorMessage ?? "File start failed.").ConfigureAwait(false);
@@ -311,21 +311,9 @@ namespace Server.Protocol
             return true;
         }
 
-        private async Task<bool> HandleFileEndAsync(byte[] payload, CancellationToken cancellationToken)
+        private async Task<bool> HandleFileEndAsync(CancellationToken cancellationToken)
         {
-            FileEndPayload? endPayload = null;
-            if (payload.Length > 0)
-            {
-                try
-                {
-                    endPayload = JsonSerializer.Deserialize<FileEndPayload>(payload, JsonOptions);
-                }
-                catch
-                {
-                }
-            }
-
-            EndFileResult result = await _fileTransferService.EndReceivingAsync(ConnectionId, endPayload, cancellationToken).ConfigureAwait(false);
+            EndFileResult result = await _fileTransferService.EndReceivingAsync(ConnectionId, cancellationToken).ConfigureAwait(false);
             if (result.Success && result.FileId is { } fileId)
             {
                 _state = ClientSessionState.Authenticated;
@@ -349,11 +337,6 @@ namespace Server.Protocol
             var ack = new AckPayload { Success = success, Id = id };
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(ack, JsonOptions);
             await _writer.WritePacketAsync(MessageType.Ack, bytes, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task SendFileStartAckAsync(CancellationToken cancellationToken)
-        {
-            await _writer.WritePacketAsync(MessageType.FileStartAck, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
         }
 
         private async Task TerminateAsync(CancellationToken cancellationToken)

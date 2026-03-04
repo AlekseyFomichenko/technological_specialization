@@ -52,10 +52,7 @@ namespace Client.Services
                             _fileClient.ReceiveChunk(payload);
                             break;
                         case MessageType.FileEnd:
-                            var fileEnd = payload.Length > 0
-                                ? JsonSerializer.Deserialize<FileEndPayload>(payload, ClientProtocolConstants.JsonOptions)
-                                : null;
-                            _fileClient.EndReceive(fileEnd);
+                            _fileClient.EndReceive();
                             break;
                         case MessageType.Ack:
                             _pending.CompleteSuccess();

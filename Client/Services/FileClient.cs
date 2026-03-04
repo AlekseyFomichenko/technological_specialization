@@ -68,11 +68,8 @@ namespace Client.Services
                     await _writer.WritePacketAsync(MessageType.FileChunk, buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                 }
             }
-
-            var endPayload = new FileEndPayload();
-            var endBytes = JsonSerializer.SerializeToUtf8Bytes(endPayload, ClientProtocolConstants.JsonOptions);
             _pending.SetPending();
-            await _writer.WritePacketAsync(MessageType.FileEnd, endBytes, cancellationToken).ConfigureAwait(false);
+            await _writer.WritePacketAsync(MessageType.FileEnd, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
 
             result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
             return result.Success ? SendFileResult.Ok() : SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
@@ -121,7 +118,7 @@ namespace Client.Services
             }
         }
 
-        public void EndReceive(FileEndPayload? _)
+        public void EndReceive()
         {
             string? path;
             string? name;
