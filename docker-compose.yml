@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -23,7 +23,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     environment:
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};"
       FileStorage__BasePath: "/app/files"
@@ -35,3 +35,7 @@ services:
 volumes:
   postgres_data:
   server_files:
+
+networks:
+  chat_network:
+    driver: bridge
