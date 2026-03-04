@@ -17,8 +17,8 @@ services:
 
   server:
     build:
-      context: ./Server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Server/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,6 +31,25 @@ services:
       Server__Port: "5001"
     volumes:
       - server_files:/app/files
+
+  migrate:
+    image: mcr.microsoft.com/dotnet/sdk:8.0-alpine
+    working_dir: /src
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/src
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};"
+    entrypoint: ["sh", "-lc"]
+    command: >
+      set -e;
+      dotnet tool install -g dotnet-ef;
+      export PATH=$PATH:/root/.dotnet/tools;
+      dotnet restore Server/Server.csproj;
+      dotnet build Server/Server.csproj -c Release --no-restore;
+      dotnet ef database update --project Server/Server.csproj --startup-project Server/Server.csproj --no-build;
 
 volumes:
   postgres_data:

@@ -26,11 +26,12 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS runtime
 
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S -G app appuser && chown -R appuser /app
+RUN addgroup -S -g 10001 appgrp \
+    && adduser -S -u 10001 -G appgrp appuser
 
-COPY --from=build --chown=appuser:app /app/publish ./
+COPY --from=build --chown=10001:10001 /app/publish ./
 
-USER appuser
+USER 10001
 
 ENV ASPNETCORE_URLS=http://+:5001
 
