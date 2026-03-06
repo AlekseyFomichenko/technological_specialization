@@ -23,7 +23,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "127.0.0.1:5001:5001"
+      - "5001:5001"
     environment:
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};"
       FileStorage__BasePath: "/app/files"
