@@ -1,6 +1,7 @@
 using Client.Options;
 using Client.Services;
 using Client.UI;
+using Microsoft.Extensions.Logging;
 
 namespace Client;
 
@@ -9,7 +10,8 @@ internal class Program
     static async Task Main(string[] args)
     {
         var options = ClientOptionsLoader.Load(args);
-        using var session = new AppSession(options);
+        using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+        using var session = new AppSession(options, loggerFactory);
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>

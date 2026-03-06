@@ -296,6 +296,8 @@ namespace Server.Protocol
                 await _writer.WritePacketAsync(MessageType.FileStartAck, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
                 return true;
             }
+            _logger.LogWarning("File start rejected: ConnectionId={ConnectionId}, Code={Code}, Message={Message}, Sender={Sender}, File={FileName}, Size={FileSize}",
+                ConnectionId, result.ErrorCode, result.ErrorMessage, senderLogin, filePayload.FileName, filePayload.FileSize);
             await SendErrorAsync(result.ErrorCode ?? "ERROR", result.ErrorMessage ?? "File start failed.").ConfigureAwait(false);
             return true;
         }
@@ -305,6 +307,8 @@ namespace Server.Protocol
             WriteChunkResult result = await _fileTransferService.WriteChunkAsync(ConnectionId, payload.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (result.Success)
                 return true;
+            _logger.LogWarning("File chunk rejected: ConnectionId={ConnectionId}, Code={Code}, Message={Message}",
+                ConnectionId, result.ErrorCode, result.ErrorMessage);
             await _fileTransferService.CancelReceivingAsync(ConnectionId, cancellationToken).ConfigureAwait(false);
             await SendErrorAsync(result.ErrorCode ?? ErrorCodes.SizeExceeded, result.ErrorMessage ?? "Chunk write failed.").ConfigureAwait(false);
             _state = ClientSessionState.Terminated;
@@ -320,6 +324,8 @@ namespace Server.Protocol
                 await SendAckAsync(true, fileId).ConfigureAwait(false);
                 return true;
             }
+            _logger.LogWarning("File end rejected: ConnectionId={ConnectionId}, Code={Code}, Message={Message}",
+                ConnectionId, result.ErrorCode, result.ErrorMessage);
             await SendErrorAsync(result.ErrorCode ?? "ERROR", result.ErrorMessage ?? "File end failed.").ConfigureAwait(false);
             _state = ClientSessionState.Authenticated;
             return true;

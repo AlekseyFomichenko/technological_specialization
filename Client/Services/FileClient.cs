@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Client.Options;
 using Client.Protocol;
+using Microsoft.Extensions.Logging;
 using Shared.DTO;
 using Shared.Models;
 using Shared.Protocol;
@@ -13,6 +14,7 @@ namespace Client.Services
         private readonly ClientOptions _options;
         private readonly PendingResponse _pending;
         private readonly SessionContext _sessionContext;
+        private readonly ILogger _logger;
         private readonly object _receiveLock = new();
         private FileStream? _receiveStream;
         private long _receiveTotal;
@@ -24,12 +26,13 @@ namespace Client.Services
         public event EventHandler<(string FileName, string SenderLogin)>? FileReceiveStarted;
         public event EventHandler<(string FileName, string SavedPath)>? FileReceiveCompleted;
 
-        public FileClient(PacketWriter writer, ClientOptions options, PendingResponse pending, SessionContext sessionContext)
+        public FileClient(PacketWriter writer, ClientOptions options, PendingResponse pending, SessionContext sessionContext, ILogger logger)
         {
             _writer = writer ?? throw new ArgumentNullException(nameof(writer));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _pending = pending ?? throw new ArgumentNullException(nameof(pending));
             _sessionContext = sessionContext ?? throw new ArgumentNullException(nameof(sessionContext));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<SendFileResult> SendFileAsync(string filePath, string receiverLogin, CancellationToken cancellationToken = default)
@@ -56,7 +59,11 @@ namespace Client.Services
 
             var result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
             if (!result.Success)
+            {
+                _logger.LogWarning("File send failed: Code={Code}, Message={Message}, File={Path}, Receiver={Receiver}",
+                    result.ErrorCode, result.ErrorMessage, filePath, receiverLogin);
                 return SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
+            }
 
             var chunkSize = _options.FileChunkSizeBytes;
             await using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true))
@@ -72,7 +79,13 @@ namespace Client.Services
             await _writer.WritePacketAsync(MessageType.FileEnd, Array.Empty<byte>(), cancellationToken).ConfigureAwait(false);
 
             result = await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
-            return result.Success ? SendFileResult.Ok() : SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
+            if (!result.Success)
+            {
+                _logger.LogWarning("File send failed: Code={Code}, Message={Message}, File={Path}, Receiver={Receiver}",
+                    result.ErrorCode, result.ErrorMessage, filePath, receiverLogin);
+                return SendFileResult.Fail(result.ErrorCode ?? "Error", result.ErrorMessage ?? "Unknown");
+            }
+            return SendFileResult.Ok();
         }
 
         public void BeginReceive(FileAvailablePayload payload)

@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Net;
 using Client.Options;
+using Microsoft.Extensions.Logging;
 using Shared.Protocol;
 
 namespace Client.Services
@@ -8,6 +9,7 @@ namespace Client.Services
     public sealed class AppSession : IDisposable
     {
         private readonly ClientOptions _options;
+        private readonly ILoggerFactory _loggerFactory;
         private TcpClient? _client;
         private Stream? _stream;
         private PacketReader? _reader;
@@ -22,9 +24,10 @@ namespace Client.Services
         private readonly object _disposeLock = new();
         private bool _disposed;
 
-        public AppSession(ClientOptions options)
+        public AppSession(ClientOptions options, ILoggerFactory loggerFactory)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         public event EventHandler? OnDisconnected;
@@ -45,8 +48,10 @@ namespace Client.Services
             _pending = new PendingResponse();
             _authClient = new AuthClient(_reader, _writer, _sessionContext);
             _chatClient = new ChatClient(_writer, _sessionContext, _pending);
-            _fileClient = new FileClient(_writer, _options, _pending, _sessionContext);
-            _connectionLoop = new ConnectionLoop(_reader, _chatClient, _fileClient, _pending, HandleDisconnected);
+            var connectionLoopLogger = _loggerFactory.CreateLogger("Client.ConnectionLoop");
+            var fileClientLogger = _loggerFactory.CreateLogger("Client.FileClient");
+            _fileClient = new FileClient(_writer, _options, _pending, _sessionContext, fileClientLogger);
+            _connectionLoop = new ConnectionLoop(_reader, _chatClient, _fileClient, _pending, HandleDisconnected, connectionLoopLogger);
         }
 
         public void StartReadLoop(CancellationToken cancellationToken = default)
