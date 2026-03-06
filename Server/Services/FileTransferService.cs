@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Microsoft.VisualBasic;
 using Server.Data.Abstracts;
 using Server.Models;
 using Server.Options;
@@ -43,27 +42,15 @@ namespace Server.Services
         {
             long maxBytes = _options.MaxFileSizeMb * 1024L * 1024;
             if (payload.FileSize > maxBytes)
-            {
-                _logger.LogWarning("File start rejected: Sender={Sender}, Receiver={Receiver}, File={FileName}, Size={FileSize}, Code=FileTooLarge",
-                    senderLogin, payload.ReceiverLogin, payload.FileName, payload.FileSize);
                 return StartFileResult.Fail(ErrorCodes.FileTooLarge, "File size exceeds limit.");
-            }
 
             var extension = Path.GetExtension(payload.FileName);
             if (string.IsNullOrEmpty(extension) || !Array.Exists(_options.AllowedExtensions ?? Array.Empty<string>(), e => string.Equals(e, extension, StringComparison.OrdinalIgnoreCase)))
-            {
-                _logger.LogWarning("File start rejected: Sender={Sender}, Receiver={Receiver}, File={FileName}, Size={FileSize}, Code=ExtensionNotAllowed",
-                    senderLogin, payload.ReceiverLogin, payload.FileName, payload.FileSize);
                 return StartFileResult.Fail(ErrorCodes.ExtensionNotAllowed, "File extension not allowed.");
-            }
 
             User? receiver = await _userRepository.GetByLoginAsync(payload.ReceiverLogin, cancellationToken).ConfigureAwait(false);
             if (receiver is null)
-            {
-                _logger.LogWarning("File start rejected: Sender={Sender}, Receiver={Receiver}, File={FileName}, Size={FileSize}, Code=ReceiverNotFound",
-                    senderLogin, payload.ReceiverLogin, payload.FileName, payload.FileSize);
                 return StartFileResult.Fail(ErrorCodes.ReceiverNotFound, "Receiver not found.");
-            }
 
             (Stream writeStream, string relativePath) = await _fileStorage.CreateWriteStreamAsync(payload.FileName, cancellationToken).ConfigureAwait(false);
 
@@ -80,8 +67,6 @@ namespace Server.Services
 
             if (!_receives.TryAdd(connectionId, receive))
             {
-                _logger.LogWarning("File start rejected: ConnectionId={ConnectionId}, Sender={Sender}, Receiver={Receiver}, Code=AlreadyReceiving",
-                    connectionId, senderLogin, payload.ReceiverLogin);
                 await writeStream.DisposeAsync().ConfigureAwait(false);
                 await _fileStorage.DeleteAsync(relativePath, cancellationToken).ConfigureAwait(false);
                 return StartFileResult.Fail(ErrorCodes.NoActiveReceive, "Already receiving a file on this connection.");
@@ -93,18 +78,12 @@ namespace Server.Services
         public async Task<WriteChunkResult> WriteChunkAsync(Guid connectionId, ReadOnlyMemory<byte> chunk, CancellationToken cancellationToken = default)
         {
             if (!_receives.TryGetValue(connectionId, out ActiveReceive? receive))
-            {
-                _logger.LogWarning("File chunk rejected: ConnectionId={ConnectionId}, Code=NoActiveReceive, Message=No active file receive.",
-                    connectionId);
                 return WriteChunkResult.Fail(ErrorCodes.NoActiveReceive, "No active file receive.");
-            }
 
             long maxBytes = _options.MaxFileSizeMb * 1024L * 1024;
             receive.ReceivedBytes += chunk.Length;
             if (receive.ReceivedBytes > maxBytes)
             {
-                _logger.LogWarning("File chunk rejected: ConnectionId={ConnectionId}, Code=SizeExceeded, Message=File size exceeded during transfer.",
-                    connectionId);
                 _receives.TryRemove(connectionId, out _);
                 await CleanupReceiveAsync(receive, cancellationToken).ConfigureAwait(false);
                 return WriteChunkResult.Fail(ErrorCodes.SizeExceeded, "File size exceeded during transfer.");
@@ -117,11 +96,7 @@ namespace Server.Services
         public async Task<EndFileResult> EndReceivingAsync(Guid connectionId, CancellationToken cancellationToken = default)
         {
             if (!_receives.TryRemove(connectionId, out ActiveReceive? receive))
-            {
-                _logger.LogWarning("File end rejected: ConnectionId={ConnectionId}, Code=NoActiveReceive, Message=No active file receive.",
-                    connectionId);
                 return EndFileResult.Fail(ErrorCodes.NoActiveReceive, "No active file receive.");
-            }
 
             await receive.Stream.DisposeAsync().ConfigureAwait(false);
 
