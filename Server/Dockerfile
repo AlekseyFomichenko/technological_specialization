@@ -31,6 +31,8 @@ RUN addgroup -S -g 10001 appgrp \
 
 COPY --from=build --chown=10001:10001 /app/publish ./
 
+RUN mkdir -p /app/files && chown 10001:10001 /app/files
+
 USER 10001
 
 ENV ASPNETCORE_URLS=http://+:5001
